@@ -2030,10 +2030,10 @@
 </script>
 <script>
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/Generator-maintenance-/sw.js', { scope: '/Generator-maintenance-/' })
-        .then(reg => console.log('✅ Service Worker مسجل بنجاح'))
-        .catch(err => console.warn('⚠️ فشل تسجيل Service Worker:', err));
-    }
+    navigator.serviceWorker.register('/Generator-maintenance/sw.js', { scope: '/Generator-maintenance/' });
+    then(reg => console.log('Service Worker registered!'));
+    .catch(err => console.warn('Service Worker failed: ' + err));
+}
 </script>
 </body>
 </html>
