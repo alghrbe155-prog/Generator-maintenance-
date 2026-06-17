@@ -2031,5 +2031,13 @@
     }, 5000);
 })();
 </script>
+<script>
+    // تسجيل Service Worker (ضعه في بداية الـ body أو بعد تحميل الصفحة)
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+        .then(reg => console.log('✅ Service Worker مسجل بنجاح'))
+        .catch(err => console.warn('⚠️ فشل تسجيل Service Worker:', err));
+    }
+</script>
 </body>
 </html>
