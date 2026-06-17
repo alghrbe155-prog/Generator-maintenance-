@@ -1,7 +1,7 @@
 // sw.js - سيرفر خدمة نظام المهندس إبراهيم الغربي
 const CACHE_NAME = 'generator-system-v1';
 const ASSETS = [
-  'y.html',
+  'index.html',
   'manifest.json',
   'sw.js',
   // روابط المكتبات الخارجية (لتخزينها مؤقتاً)
