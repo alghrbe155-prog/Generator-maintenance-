@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>🛢️ تقارير الزيت والفلاتر - جميع الفلاتر</title>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Cairo',sans-serif;direction:rtl;background:#020617;color:#f8fafc;padding:16px 12px 110px}
+.wrap{max-width:1200px;margin:0 auto}
+.header,.stat,.panel,.card{background:#0f172ae6;border:1px solid rgba(255,255,255,.08);border-radius:22px}
+.header{padding:18px}
+h1{margin:0 0 8px;font-size:24px}
+.sub,.muted{color:#94a3b8}
+.toolbar,.actions,.grid,.row{display:grid;gap:10px}
+.toolbar{grid-template-columns:1.2fr .8fr .8fr;margin-top:14px}
+.grid{grid-template-columns:repeat(4,1fr);margin-top:16px}
+.stat,.panel,.card{padding:16px}
+input,select,button{width:100%;border:none;outline:none;border-radius:16px;padding:14px 15px;background:#0f172a;color:#f8fafc;font-size:15px}
+button{cursor:pointer;font-weight:800}
+.btn-primary{background:linear-gradient(45deg,#0072ff,#00c6ff);color:white}
+.btn-dark{background:#111827}
+.btn-danger{background:#b91c1c}
+.btn-success{background:#047857}
+.btn-back{background:#334155;color:white;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chip{padding:10px 14px;border-radius:999px;background:#111827;border:1px solid rgba(255,255,255,.08);cursor:pointer;font-weight:700}
+.chip.active{background:#00c6ff;color:#02111d}
+.list{display:grid;gap:12px;margin-top:16px}
+.top{display:flex;justify-content:space-between}
+.title{font-size:18px;font-weight:900}
+.badge{display:inline-block;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:800;margin-top:8px}
+.b-red{background:rgba(239,68,68,.15);color:#fecaca;border:1px solid rgba(239,68,68,.4)}
+.b-yellow{background:rgba(245,158,11,.14);color:#fde68a;border:1px solid rgba(245,158,11,.4)}
+.b-green{background:rgba(16,185,129,.12);color:#a7f3d0;border:1px solid rgba(16,185,129,.35)}
+.row{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px}
+.kv{background:#0b1220;border-radius:14px;padding:10px 12px;font-size:14px}
+.kv b{display:block;font-size:12px;color:#94a3b8}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.footerbar{position:fixed;left:12px;right:12px;bottom:12px;background:rgba(15,23,42,.95);border-radius:20px;padding:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.empty{text-align:center;padding:28px 16px;color:#94a3b8;border:1px dashed rgba(255,255,255,.14);border-radius:20px}
+.warning-text{color:#f97316;font-weight:bold}
+.danger-text{color:#ef4444;font-weight:bold}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <h1>🛢️ تقارير الزيت والفلاتر (جميع الفلاتر)</h1>
+    <div class="sub">عرض سجلات تغيير الزيت مع حساب الساعات منذ آخر تغيير لكل فلتر (600 ساعة)</div>
+    <button class="btn-back" onclick="goBack()">🔙 العودة للنظام الرئيسي</button>
+    <div class="toolbar">
+      <input id="search" placeholder="🔍 ابحث بالموقع، التاريخ..." oninput="render()">
+      <select id="mode" onchange="render()">
+        <option value="due">المستحق خلال يومين</option>
+        <option value="soon">المستحق خلال 7 أيام</option>
+        <option value="all">كل سجلات الزيت</option>
+      </select>
+      <button class="btn-primary" onclick="copyAll()">📋 نسخ التقرير الكامل</button>
+    </div>
+    <div class="filters">
+      <span class="chip active" data-f="all" onclick="setFilter('all',this)">الكل</span>
+      <span class="chip" data-f="oil" onclick="setFilter('oil',this)">فلتر زيت</span>
+      <span class="chip" data-f="diesel" onclick="setFilter('diesel',this)">فلتر ديزل</span>
+      <span class="chip" data-f="air" onclick="setFilter('air',this)">فلتر هواء</span>
+      <span class="chip" data-f="none" onclick="setFilter('none',this)">بدون فلاتر</span>
+      <span class="chip" data-f="filter_needed" onclick="setFilter('filter_needed',this)">⏰ يحتاج فلتر</span>
+    </div>
+  </div>
+  <div class="grid">
+    <div class="stat"><div class="muted">إجمالي سجلات الزيت</div><div id="totalCount">0</div></div>
+    <div class="stat"><div class="muted">مستحق (≤2 يوم)</div><div id="dueCount">0</div></div>
+    <div class="stat"><div class="muted">يحتاج فلتر زيت</div><div id="oilFilterNeed">0</div></div>
+    <div class="stat"><div class="muted">يحتاج فلتر ديزل/هواء</div><div id="otherFilterNeed">0</div></div>
+  </div>
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-size:18px;font-weight:900">قائمة تقارير تغيير الزيت</div><div class="muted small">كل سجل يعرض حالة الفلاتر بناءً على آخر تغيير</div></div>
+      <button class="btn-dark" onclick="reloadData()">🔄 تحديث</button>
+    </div>
+    <div id="list" class="list"></div>
+  </div>
+</div>
+<div class="footerbar">
+  <button class="btn-success" onclick="copyVisible()">📋 نسخ الظاهر</button>
+  <button class="btn-dark" onclick="downloadTxt()">⬇️ تنزيل TXT</button>
+  <button class="btn-danger" onclick="window.scrollTo({top:0,behavior:'smooth'})">⬆️ أعلى</button>
+</div>
+
+<script>
+const firebaseConfig={apiKey:"AIzaSyBwqIx4ZfEHKvYzLwnw5npl2My3YGO6zOQ",authDomain:"generators-cf3f8.firebaseapp.com",databaseURL:"https://generators-cf3f8-default-rtdb.firebaseio.com"};
+let db=null,oils=[],visible=[],activeFilter='all';
+try{firebase.initializeApp(firebaseConfig);db=firebase.database()}catch(e){console.warn(e)}
+
+function daysRemaining(s){if(!s)return Infinity;const t=new Date();t.setHours(0,0,0,0);const d=new Date(s);d.setHours(0,0,0,0);return Math.ceil((d-t)/86400000)}
+function loadFromLocal(){try{const raw=localStorage.getItem("oils");oils=raw?JSON.parse(raw):[]}catch{oils=[]}}
+async function loadFromFirebase(){if(db){const snap=await db.ref("oils").get();if(snap.exists())oils=Object.values(snap.val())}}
+
+// حساب الساعات المقطوعة منذ آخر تغيير لفلتر معين
+function getHoursSinceLastFilter(site, filterType) {
+  let siteOils = oils.filter(o => o.site === site).sort((a,b)=>new Date(b.date)-new Date(a.date));
+  let lastChangeHours = null;
+  for(let oil of siteOils) {
+    if(oil.filters && oil.filters[filterType] === true) {
+      lastChangeHours = oil.current;
+      break;
+    }
+  }
+  if(lastChangeHours === null) return Infinity;
+  let latestHours = siteOils[0] ? siteOils[0].current : 0;
+  return latestHours - lastChangeHours;
+}
+
+function getFilterStatus(site, filterType) {
+  let hoursSince = getHoursSinceLastFilter(site, filterType);
+  let filterName = filterType === 'oil' ? 'زيت' : (filterType === 'diesel' ? 'ديزل' : 'هواء');
+  if(hoursSince === Infinity) return { need: true, hours: null, text: `⚠️ لم يتم تغيير فلتر ${filterName} مطلقاً` };
+  if(hoursSince >= 600) return { need: true, hours: hoursSince, text: `🔴 يحتاج تغيير فلتر ${filterName} (تجاوز ${hoursSince} ساعة)` };
+  return { need: false, hours: hoursSince, text: `✅ فلتر ${filterName} جيد (${hoursSince} ساعة)` };
+}
+
+function normalize(r){
+  let site=r.site??"بدون موقع";
+  let oilFilterStatus = getFilterStatus(site, 'oil');
+  let dieselFilterStatus = getFilterStatus(site, 'diesel');
+  let airFilterStatus = getFilterStatus(site, 'air');
+  return {
+    site, date:r.date??"", current:r.current??"", diesel:r.diesel??0,
+    avgDailyHours:r.avgDailyHours??"", nextDate:r.nextDate??"",
+    recordedBy:r.recordedBy??"غير معروف",
+    filters:r.filters??{oil:false,diesel:false,air:false},
+    oilFilterNeed: oilFilterStatus.need,
+    dieselFilterNeed: dieselFilterStatus.need,
+    airFilterNeed: airFilterStatus.need,
+    oilFilterText: oilFilterStatus.text,
+    dieselFilterText: dieselFilterStatus.text,
+    airFilterText: airFilterStatus.text
+  };
+}
+
+function modeOk(r){const d=daysRemaining(r.nextDate);const m=document.getElementById("mode").value;if(m==="all")return true;if(m==="soon")return d>=0&&d<=7;return d>=0&&d<=2}
+function filterOk(r){
+  if(activeFilter==="all") return true;
+  if(activeFilter==="none") return !r.filters.oil && !r.filters.diesel && !r.filters.air;
+  if(activeFilter==="filter_needed") return r.oilFilterNeed || r.dieselFilterNeed || r.airFilterNeed;
+  return !!r.filters[activeFilter];
+}
+function searchOk(r){const q=document.getElementById("search").value.trim().toLowerCase();if(!q)return true;return (r.site+" "+r.date+" "+r.current+" "+r.recordedBy).toLowerCase().includes(q)}
+
+function text(r){
+  const d=daysRemaining(r.nextDate);
+  const status=d<=2?"مستحق الآن":(d<=7?"قريب":"ممتاز");
+  let t=`📋 تقرير صيانة زيت\n━━━━━━━━━━━━━━━━━━━━━━\n📍 ${r.site}\n📅 ${r.date}\n⏱️ العداد: ${r.current} H\n⛽ ديزل: ${r.diesel} CM\n⏱️ متوسط التشغيل: ${r.avgDailyHours||"-"}\n📅 التغيير القادم: ${r.nextDate||"-"}\n⏳ المتبقي: ${d===Infinity?"-":d+" يوم"}\n📌 الحالة: ${status}\n\n🔧 الفلاتر المستبدلة في هذا السجل:\n✅ فلتر زيت: ${r.filters.oil?"نعم":"لا"}\n✅ فلتر ديزل: ${r.filters.diesel?"نعم":"لا"}\n✅ فلتر هواء: ${r.filters.air?"نعم":"لا"}\n\n⚠️ تنبيه الفلاتر (بناءً على آخر تغيير):\n${r.oilFilterText}\n${r.dieselFilterText}\n${r.airFilterText}\n\n👤 المسجل: ${r.recordedBy}`;
+  return t;
+}
+
+async function copyText(t){try{await navigator.clipboard.writeText(t);alert("✅ تم نسخ التقرير")}catch{const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();document.execCommand("copy");a.remove();alert("✅ تم النسخ")}}
+function setFilter(f,el){activeFilter=f;document.querySelectorAll(".chip").forEach(c=>c.classList.remove("active"));el.classList.add("active");render()}
+function render(){
+  const data=oils.map(normalize).filter(modeOk).filter(filterOk).filter(searchOk).sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+  visible=data;
+  const total=oils.length;
+  const due=oils.map(normalize).filter(r=>daysRemaining(r.nextDate)>=0&&daysRemaining(r.nextDate)<=2).length;
+  const oilNeed=data.filter(r=>r.oilFilterNeed).length;
+  const otherNeed=data.filter(r=>r.dieselFilterNeed || r.airFilterNeed).length;
+  document.getElementById("totalCount").textContent=total;
+  document.getElementById("dueCount").textContent=due;
+  document.getElementById("oilFilterNeed").textContent=oilNeed;
+  document.getElementById("otherFilterNeed").textContent=otherNeed;
+  const listDiv=document.getElementById("list");
+  if(!data.length){listDiv.innerHTML='<div class="empty">لا توجد نتائج مطابقة</div>';return}
+  listDiv.innerHTML=data.map((r,i)=>{
+    const d=daysRemaining(r.nextDate);
+    const cls=d<=2?"b-red":(d<=7?"b-yellow":"b-green");
+    const txt=d<=2?"مستحق الآن":(d<=7?"قريب":"ممتاز");
+    return `<div class="card">
+      <div class="top"><div><div class="title">📍 ${r.site}</div><span class="badge ${cls}">${txt}${d===Infinity?"":" • "+d+" يوم"}</span></div><div class="muted small">#${i+1}</div></div>
+      <div class="row">
+        <div class="kv"><b>التاريخ</b>${r.date}</div><div class="kv"><b>العداد</b>${r.current} H</div>
+        <div class="kv"><b>⛽ ديزل</b>${r.diesel} CM</div><div class="kv"><b>متوسط التشغيل</b>${r.avgDailyHours||"-"}</div>
+        <div class="kv"><b>التغيير القادم</b>${r.nextDate||"-"}</div><div class="kv"><b>المسجل</b>${r.recordedBy}</div>
+      </div>
+      <div class="row">
+        <div class="kv"><b>🛢️ فلتر زيت (هذا السجل)</b>${r.filters.oil?"✅ تم تغييره":"—"}</div>
+        <div class="kv"><b>⛽ فلتر ديزل (هذا السجل)</b>${r.filters.diesel?"✅ تم تغييره":"—"}</div>
+        <div class="kv"><b>💨 فلتر هواء (هذا السجل)</b>${r.filters.air?"✅ تم تغييره":"—"}</div>
+      </div>
+      <div class="row" style="background:#0f172a;border-radius:16px;margin-top:8px">
+        <div class="kv"><b>⚠️ تنبيه فلتر الزيت</b><span class="${r.oilFilterNeed?'danger-text':'muted'}">${r.oilFilterText}</span></div>
+        <div class="kv"><b>⚠️ تنبيه فلتر الديزل</b><span class="${r.dieselFilterNeed?'danger-text':'muted'}">${r.dieselFilterText}</span></div>
+        <div class="kv"><b>⚠️ تنبيه فلتر الهواء</b><span class="${r.airFilterNeed?'danger-text':'muted'}">${r.airFilterText}</span></div>
+      </div>
+      <div class="actions">
+        <button class="btn-primary" onclick='copyText(${JSON.stringify(text(r))})'>📋 نسخ التقرير الكامل</button>
+        <button class="btn-dark" onclick='copyText(${JSON.stringify(`${r.site} | ${r.date} | زيت: ${r.oilFilterText} | ديزل: ${r.dieselFilterText} | هواء: ${r.airFilterText}`)})'>📋 نسخ مختصر</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function reloadData(){loadFromLocal();await loadFromFirebase();render()}
+async function copyAll(){if(!visible.length)return alert("لا توجد بيانات");await copyText(visible.map(text).join("\n\n━━━━━━━━━━━━━━━━━━━━━━\n\n"))}
+async function copyVisible(){await copyAll()}
+function downloadTxt(){if(!visible.length)return alert("لا توجد بيانات");const blob=new Blob([visible.map(text).join("\n\n━━━━━━━━━━━━━━━━━━━━━━\n\n")],{type:"text/plain"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`oil_reports_${Date.now()}.txt`;a.click();URL.revokeObjectURL(a.href)}
+function goBack(){window.location.href="y.html"}
+window.addEventListener('storage',function(e){if(e.key==='oils'){loadFromLocal();render()}});
+document.addEventListener('visibilitychange',function(){if(!document.hidden){loadFromLocal();render()}});
+(async function init(){loadFromLocal();await loadFromFirebase();render()})();
+</script>
+<script>
+// ============================================================
+//  عرض المولدات المتجاوزة 300 ساعة في تقارير الزيت
+//  أضف هذا الكود في نهاية oil_reports_page.html (قبل </body>)
+// ============================================================
+(function() {
+
+    // دالة لجلب المولدات المتجاوزة من localStorage
+    function getOverdueSites() {
+        try {
+            var allStatus = JSON.parse(localStorage.getItem('oilOverdueStatus') || '{}');
+            var overdue = [];
+            for (var site in allStatus) {
+                if (allStatus[site].isOverdue) {
+                    overdue.push({
+                        site: site,
+                        currentHours: allStatus[site].currentHours,
+                        lastOilDate: allStatus[site].lastOilDate,
+                        lastOilHours: allStatus[site].lastOilHours,
+                        diff: allStatus[site].diff,
+                        remaining: allStatus[site].remaining
+                    });
+                }
+            }
+            overdue.sort(function(a, b) { return b.diff - a.diff; });
+            return overdue;
+        } catch(e) {
+            return [];
+        }
+    }
+
+    // إضافة قسم التجاوز في أعلى الصفحة
+    function addOverdueSection() {
+        var overdueList = getOverdueSites();
+        if (overdueList.length === 0) return;
+
+        var container = document.querySelector('.wrap');
+        if (!container) return;
+
+        // البحث عن قسم موجود مسبقاً
+        var existingSection = document.getElementById('overdueAlertSection');
+        if (existingSection) existingSection.remove();
+
+        var section = document.createElement('div');
+        section.id = 'overdueAlertSection';
+        section.style.cssText = 'background:rgba(239,68,68,0.15); border:2px solid #ef4444; border-radius:22px; padding:18px; margin-bottom:20px;';
+
+        var html = '<div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">';
+        html += '<span style="font-size:28px;">🚨</span>';
+        html += '<span style="font-size:20px; font-weight:900; color:#ef4444;">مولدات تجاوزت 300 ساعة من آخر تغيير زيت</span>';
+        html += '</div>';
+
+        overdueList.forEach(function(item) {
+            html += '<div style="background:#0f172a; border-radius:16px; padding:14px; margin-bottom:10px; border-right:4px solid #ef4444;">';
+            html += '<div style="font-weight:800; font-size:17px;">📍 ' + item.site + '</div>';
+            html += '<div style="display:flex; flex-wrap:wrap; gap:12px; margin-top:6px; font-size:14px;">';
+            html += '<span>🕒 العداد الحالي: <strong>' + item.currentHours + '</strong> ساعة</span>';
+            html += '<span>🛢️ آخر تغيير: <strong>' + item.lastOilDate + '</strong> (العداد: ' + item.lastOilHours + ')</span>';
+            html += '<span>📊 المشي: <strong style="color:#f97316;">' + item.diff + '</strong> ساعة</span>';
+            html += '<span>⏳ تجاوز بـ <strong style="color:#ef4444;">' + (item.diff - 300) + '</strong> ساعة</span>';
+            html += '</div>';
+            html += '</div>';
+        });
+
+        section.innerHTML = html;
+        // إدخال القسم بعد header وقبل الـ grid
+        var header = container.querySelector('.header');
+        if (header) {
+            header.insertAdjacentElement('afterend', section);
+        } else {
+            container.prepend(section);
+        }
+    }
+
+    // تحديث كل 30 ثانية
+    function initOverdueAlert() {
+        addOverdueSection();
+        setInterval(addOverdueSection, 30000);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initOverdueAlert);
+    } else {
+        initOverdueAlert();
+    }
+
+})();
+</script>
+</body>
+</html>
