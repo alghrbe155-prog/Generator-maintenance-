@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>حالة الزيت المتقدمة - مع الفلاتر</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; }
+        body { background: #020617; color: #f8fafc; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { text-align: center; color: #00c6ff; margin-bottom: 15px; }
+        .back-btn {
+            background: #1e293b; border: 1px solid #00c6ff; color: #00c6ff;
+            padding: 10px 20px; border-radius: 30px; cursor: pointer;
+            display: inline-block; margin-bottom: 20px; font-weight: bold;
+            text-decoration: none;
+        }
+        .section {
+            background: #0f172a; border-radius: 25px; padding: 20px;
+            margin-bottom: 35px; border: 1px solid #1e293b;
+            overflow-x: auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .section-title {
+            font-size: 22px; font-weight: 800; color: #00c6ff;
+            margin-bottom: 15px; display: flex; justify-content: space-between;
+            align-items: center; flex-wrap: wrap; gap: 10px;
+        }
+        .action-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+        .small-btn {
+            background: linear-gradient(45deg, #0072ff, #00c6ff);
+            border: none; padding: 6px 15px; border-radius: 30px;
+            color: white; font-weight: 700; cursor: pointer; font-size: 13px;
+            display: inline-flex; align-items: center; gap: 5px;
+        }
+        .copy-all-btn { background: linear-gradient(45deg, #128C7E, #075E54); }
+        .pdf-btn, .single-print-btn { background: linear-gradient(45deg, #dc2626, #b91c1c); }
+        
+        .data-table {
+            width: 100%; border-collapse: collapse; direction: rtl; font-size: 14px;
+        }
+        .data-table th, .data-table td {
+            border: 1px solid #334155; padding: 10px 8px;
+            text-align: center; vertical-align: middle;
+        }
+        .data-table th { background: #1e293b; color: #00c6ff; font-weight: 800; }
+        .data-table td { background: #0f172a; color: #f8fafc; }
+        .status-overdue { background: #991b1b; color: #ffdddd; font-weight: bold; }
+        .status-critical { background: #7f1a1a; color: #fecaca; font-weight: bold; }
+        .status-warning { background: #78350f; color: #fde68a; font-weight: bold; }
+        .status-good { background: #064e3b; color: #a7f3d0; font-weight: bold; }
+        .need-filter { background: #7f1a1a; color: #fecaca; font-weight: bold; }
+        .footer {
+            text-align: center; margin-top: 30px; font-size: 12px; color: #94a3b8;
+        }
+        @media (max-width: 800px) {
+            .data-table th, .data-table td { padding: 6px 4px; font-size: 11px; }
+            .section-title { font-size: 18px; }
+        }
+        /* تنسيق الطباعة */
+        @media print {
+            .action-buttons, .back-btn, .footer, .section-title button { display: none; }
+            body { background: white; padding: 0; margin: 0; }
+            .data-table td { background: white; color: black; }
+            .data-table th { background: #e2e8f0; color: black; border: 1px solid #aaa; }
+            .section { background: white; border: 1px solid #ccc; margin: 10px; }
+            .status-overdue, .status-critical, .status-warning, .status-good, .need-filter { background: white; color: black; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+        <a class="back-btn" href="y.html">🔙 العودة للنظام الرئيسي</a>
+        <h1>🛢️ حالة صيانة الزيت - متقدمة (مع الفلاتر)</h1>
+        <div style="width: 100px;"></div>
+    </div>
+    <div class="action-buttons" style="justify-content: center; margin-bottom: 20px;">
+        <button id="copyAllTablesBtn" class="small-btn copy-all-btn">📋 نسخ جميع الجداول</button>
+        <button id="printAllBtn" class="small-btn pdf-btn">🖨️ طباعة كل الصفحة (PDF)</button>
+    </div>
+
+    <div class="section" id="section1">
+        <div class="section-title">
+            <span>📊 1. جميع المواقع (آخر صيانة زيت + حالة الفلاتر)</span>
+            <div class="action-buttons">
+                <button class="small-btn copy-section" data-section="all">📋 نسخ الجدول</button>
+                <button class="small-btn single-print-btn" data-print="all">🖨️ طباعة هذا الجدول (PDF)</button>
+            </div>
+        </div>
+        <div id="allSitesContainer"></div>
+    </div>
+
+    <div class="section" id="section2">
+        <div class="section-title">
+            <span>⚠️ 2. المواقع التي تجاوزت 300 ساعة (تحتاج صيانة فورية)</span>
+            <div class="action-buttons">
+                <button class="small-btn copy-section" data-section="overdue">📋 نسخ الجدول</button>
+                <button class="small-btn single-print-btn" data-print="overdue">🖨️ طباعة هذا الجدول (PDF)</button>
+            </div>
+        </div>
+        <div id="overdueContainer"></div>
+    </div>
+
+    <div class="section" id="section3">
+        <div class="section-title">
+            <span>✅ 3. المواقع التي تم تغيير زيتها مؤخراً (آخر 30 يوم)</span>
+            <div class="action-buttons">
+                <button class="small-btn copy-section" data-section="changed">📋 نسخ الجدول</button>
+                <button class="small-btn single-print-btn" data-print="changed">🖨️ طباعة هذا الجدول (PDF)</button>
+            </div>
+        </div>
+        <div id="changedOilContainer"></div>
+    </div>
+
+    <div class="section" id="section4">
+        <div class="section-title">
+            <span>🔧 4. المواقع التي تحتاج تغيير فلتر (زيت / ديزل / هواء) - 600 ساعة</span>
+            <div class="action-buttons">
+                <button class="small-btn copy-section" data-section="filter">📋 نسخ الجدول</button>
+                <button class="small-btn single-print-btn" data-print="filter">🖨️ طباعة هذا الجدول (PDF)</button>
+            </div>
+        </div>
+        <div id="filterContainer"></div>
+    </div>
+
+    <div class="footer">
+        * الساعات المتبقية تحسب بناءً على متوسط التشغيل اليومي (16 ساعة افتراضياً)<br>
+        * التجاوز يعني أن الساعات المقطوعة منذ آخر تغيير زيت تجاوزت 300 ساعة<br>
+        * الفلاتر: يتم حساب الساعات منذ آخر تغيير لكل فلتر، إذا تجاوز 600 ساعة يظهر "يحتاج تغيير"<br>
+        * يتم التحديث تلقائياً كل دقيقة
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyBwqIx4ZfEHKvYzLwnw5npl2My3YGO6zOQ",
+        authDomain: "generators-cf3f8.firebaseapp.com",
+        databaseURL: "https://generators-cf3f8-default-rtdb.firebaseio.com"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    function daysRemaining(nextDate) {
+        if (!nextDate) return null;
+        const today = new Date(); today.setHours(0,0,0,0);
+        const target = new Date(nextDate); target.setHours(0,0,0,0);
+        return Math.ceil((target - today) / (1000*60*60*24));
+    }
+
+    function calcNextDate(currentHours, avgDaily, recordDate) {
+        if (!avgDaily || avgDaily <= 0) return null;
+        const daysNeeded = Math.ceil(300 / avgDaily);
+        const target = new Date(recordDate);
+        target.setDate(target.getDate() + daysNeeded);
+        return target.toISOString().split('T')[0];
+    }
+
+    // حساب الساعات منذ آخر تغيير لفلتر معين
+    function getHoursSinceLastFilter(siteOils, filterType) {
+        let lastChangeHours = null;
+        for(let oil of siteOils) {
+            if(oil.filters && oil.filters[filterType] === true) {
+                lastChangeHours = oil.current;
+                break;
+            }
+        }
+        if(lastChangeHours === null) return Infinity;
+        let latestHours = siteOils[0] ? siteOils[0].current : 0;
+        return latestHours - lastChangeHours;
+    }
+
+    function getFilterStatus(siteOils, filterType) {
+        let hours = getHoursSinceLastFilter(siteOils, filterType);
+        let filterName = filterType === 'oil' ? 'زيت' : (filterType === 'diesel' ? 'ديزل' : 'هواء');
+        if(hours === Infinity) return { need: true, text: `⚠️ لم يُغير فلتر ${filterName}` };
+        if(hours >= 600) return { need: true, text: `🔴 يحتاج (${hours} ساعة)` };
+        return { need: false, text: `✅ جيد (${hours} ساعة)` };
+    }
+
+    // بناء الجدول مع أعمدة الفلاتر
+    function buildTable(data, showFilters = true) {
+        if (!data || data.length === 0) {
+            const div = document.createElement('div');
+            div.style.textAlign = 'center';
+            div.style.padding = '20px';
+            div.innerText = '✨ لا توجد بيانات';
+            return div;
+        }
+        const table = document.createElement('table');
+        table.className = 'data-table';
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        let headers = ['#', 'اسم الموقع', 'آخر تغيير زيت', 'العداد', 'الموعد القادم', 'المتبقي (ساعة)', 'الحالة'];
+        if (showFilters) {
+            headers.push('فلتر زيت', 'فلتر ديزل', 'فلتر هواء');
+        }
+        headers.forEach(text => {
+            const th = document.createElement('th');
+            th.innerText = text;
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+        const tbody = document.createElement('tbody');
+        data.forEach((item, idx) => {
+            const row = document.createElement('tr');
+            const tdNum = document.createElement('td'); tdNum.innerText = (idx+1).toString(); row.appendChild(tdNum);
+            const tdSite = document.createElement('td'); tdSite.innerText = item.site || '?'; tdSite.style.fontWeight = 'bold'; row.appendChild(tdSite);
+            const tdDate = document.createElement('td'); tdDate.innerText = item.date || '—'; row.appendChild(tdDate);
+            const tdHours = document.createElement('td'); tdHours.innerText = (item.currentHours !== undefined && item.currentHours !== null) ? item.currentHours + ' H' : '—'; row.appendChild(tdHours);
+            const tdNext = document.createElement('td'); tdNext.innerText = item.nextDate || '—'; row.appendChild(tdNext);
+            const tdRemaining = document.createElement('td');
+            let remainingDisplay = '—', statusClass = '', statusText = '—';
+            if (item.remainingHours !== null && item.remainingHours !== undefined) {
+                const rem = item.remainingHours;
+                if (rem < 0) {
+                    remainingDisplay = `تجاوز ${Math.abs(rem)} ساعة`;
+                    statusClass = 'status-overdue'; statusText = '🔴 تجاوز';
+                } else {
+                    remainingDisplay = `${rem} ساعة`;
+                    if (rem <= 50) { statusClass = 'status-critical'; statusText = '🔴 حرج'; }
+                    else if (rem <= 100) { statusClass = 'status-warning'; statusText = '🟠 قريب'; }
+                    else { statusClass = 'status-good'; statusText = '🟢 جيد'; }
+                }
+            }
+            tdRemaining.innerText = remainingDisplay; row.appendChild(tdRemaining);
+            const tdStatus = document.createElement('td'); tdStatus.innerText = statusText; if (statusClass) tdStatus.className = statusClass; row.appendChild(tdStatus);
+            
+            if (showFilters) {
+                const tdOil = document.createElement('td'); tdOil.innerText = item.oilFilter?.text || '—'; if (item.oilFilter?.need) tdOil.className = 'need-filter'; row.appendChild(tdOil);
+                const tdDiesel = document.createElement('td'); tdDiesel.innerText = item.dieselFilter?.text || '—'; if (item.dieselFilter?.need) tdDiesel.className = 'need-filter'; row.appendChild(tdDiesel);
+                const tdAir = document.createElement('td'); tdAir.innerText = item.airFilter?.text || '—'; if (item.airFilter?.need) tdAir.className = 'need-filter'; row.appendChild(tdAir);
+            }
+            tbody.appendChild(row);
+        });
+        table.appendChild(tbody);
+        return table;
+    }
+
+    function displayTables(all, overdue, recent, filterNeeded) {
+        const allC = document.getElementById('allSitesContainer');
+        const overC = document.getElementById('overdueContainer');
+        const changedC = document.getElementById('changedOilContainer');
+        const filterC = document.getElementById('filterContainer');
+        allC.innerHTML = ''; overC.innerHTML = ''; changedC.innerHTML = ''; filterC.innerHTML = '';
+        if (all.length) allC.appendChild(buildTable(all, true));
+        else allC.innerHTML = '<div style="text-align:center; padding:20px;">✨ لا توجد بيانات</div>';
+        if (overdue.length) overC.appendChild(buildTable(overdue, true));
+        else overC.innerHTML = '<div style="text-align:center; padding:20px;">✨ لا توجد بيانات</div>';
+        if (recent.length) changedC.appendChild(buildTable(recent, true));
+        else changedC.innerHTML = '<div style="text-align:center; padding:20px;">✨ لا توجد بيانات</div>';
+        if (filterNeeded.length) filterC.appendChild(buildTable(filterNeeded, true));
+        else filterC.innerHTML = '<div style="text-align:center; padding:20px;">✨ لا توجد مواقع تحتاج فلتر</div>';
+    }
+
+    async function loadData() {
+        try {
+            const snap = await database.ref('oils').once('value');
+            const oilsData = snap.val();
+            if (!oilsData) { displayTables([], [], [], []); return; }
+            const oilsArray = Object.values(oilsData);
+            const latestMap = new Map();
+            // تجميع جميع سجلات الزيت لكل موقع (مرتبة زمنياً) لحساب الفلاتر
+            const allSiteOils = new Map();
+            for (const oil of oilsArray) {
+                const site = oil.site;
+                if (!site) continue;
+                if (!allSiteOils.has(site)) allSiteOils.set(site, []);
+                allSiteOils.get(site).push(oil);
+                // أيضاً لتحديد أحدث سجل
+                if (!latestMap.has(site) || new Date(oil.date) > new Date(latestMap.get(site).date)) {
+                    latestMap.set(site, oil);
+                }
+            }
+            // ترتيب سجلات كل موقع تنازلياً حسب التاريخ
+            for (let oils of allSiteOils.values()) {
+                oils.sort((a,b) => new Date(b.date) - new Date(a.date));
+            }
+
+            const now = new Date();
+            const thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(now.getDate() - 30);
+            const all = [], overdue = [], recent = [], filterNeeded = [];
+            
+            for (const [site, oil] of latestMap.entries()) {
+                let lastHours = (oil.current !== undefined && oil.current !== null && !isNaN(oil.current)) ? Number(oil.current) : 0;
+                let avgDaily = (oil.avgDailyHours !== undefined && oil.avgDailyHours !== null && !isNaN(oil.avgDailyHours)) ? Number(oil.avgDailyHours) : 16;
+                let recordDate = oil.date ? new Date(oil.date) : new Date();
+                let nextDate = oil.nextDate;
+                if (!nextDate && avgDaily > 0) nextDate = calcNextDate(lastHours, avgDaily, recordDate);
+                let remaining = null;
+                if (nextDate && avgDaily > 0) {
+                    const days = daysRemaining(nextDate);
+                    if (days !== null) remaining = Math.round(days * avgDaily);
+                }
+                
+                // حساب حالة الفلاتر باستخدام جميع سجلات الموقع
+                const siteOilsSorted = allSiteOils.get(site) || [];
+                const oilFilter = getFilterStatus(siteOilsSorted, 'oil');
+                const dieselFilter = getFilterStatus(siteOilsSorted, 'diesel');
+                const airFilter = getFilterStatus(siteOilsSorted, 'air');
+                
+                const item = {
+                    site, date: oil.date || '—', currentHours: lastHours,
+                    nextDate: nextDate || '—', remainingHours: remaining,
+                    oilFilter, dieselFilter, airFilter
+                };
+                all.push(item);
+                if (remaining !== null && remaining < 0) overdue.push(item);
+                if (oil.date && new Date(oil.date) >= thirtyDaysAgo) recent.push(item);
+                if (oilFilter.need || dieselFilter.need || airFilter.need) filterNeeded.push(item);
+            }
+            all.sort((a,b) => a.site.localeCompare(b.site));
+            overdue.sort((a,b) => (a.remainingHours || 0) - (b.remainingHours || 0));
+            recent.sort((a,b) => new Date(b.date) - new Date(a.date));
+            filterNeeded.sort((a,b) => a.site.localeCompare(b.site));
+            displayTables(all, overdue, recent, filterNeeded);
+        } catch(e) { console.error(e); displayTables([], [], [], []); }
+    }
+
+    // دوال النسخ (محسنة لتدعم الأعمدة الجديدة)
+    function getTableText(tableElement) {
+        let text = '';
+        const rows = tableElement.querySelectorAll('tr');
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('th, td');
+            text += Array.from(cells).map(cell => cell.innerText.trim()).join('\t') + '\n';
+        });
+        return text;
+    }
+    function copyTable(tableElement, title) {
+        if (!tableElement) return alert('لا يوجد جدول لنسخه');
+        const text = title + '\n' + getTableText(tableElement);
+        navigator.clipboard.writeText(text).then(() => alert(`✅ تم نسخ "${title}"`)).catch(() => {
+            const ta = document.createElement('textarea');
+            ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+            alert(`✅ تم نسخ "${title}"`);
+        });
+    }
+    function copyAllTables() {
+        const allTable = document.querySelector('#allSitesContainer .data-table');
+        const overTable = document.querySelector('#overdueContainer .data-table');
+        const recentTable = document.querySelector('#changedOilContainer .data-table');
+        const filterTable = document.querySelector('#filterContainer .data-table');
+        let full = 'جميع المواقع\n' + (allTable ? getTableText(allTable) : '') + '\n\n';
+        full += 'المواقع المتجاوزة 300 ساعة\n' + (overTable ? getTableText(overTable) : '') + '\n\n';
+        full += 'المواقع المحدثة حديثاً\n' + (recentTable ? getTableText(recentTable) : '') + '\n\n';
+        full += 'المواقع التي تحتاج فلتر (زيت/ديزل/هواء)\n' + (filterTable ? getTableText(filterTable) : '');
+        navigator.clipboard.writeText(full).then(() => alert('✅ تم نسخ جميع الجداول')).catch(() => {
+            const ta = document.createElement('textarea'); ta.value = full; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+            alert('✅ تم نسخ جميع الجداول');
+        });
+    }
+
+    // دالة طباعة جدول محدد
+    function printSingleTable(tableElement, title) {
+        if (!tableElement) { alert('لا يوجد جدول للطباعة'); return; }
+        const originalTitle = document.title;
+        document.title = title;
+        const cloneDiv = document.createElement('div');
+        cloneDiv.style.direction = 'rtl';
+        cloneDiv.style.fontFamily = 'Cairo, sans-serif';
+        cloneDiv.style.padding = '20px';
+        const titleElem = document.createElement('h2');
+        titleElem.innerText = title;
+        titleElem.style.textAlign = 'center';
+        titleElem.style.color = '#0072ff';
+        cloneDiv.appendChild(titleElem);
+        const dateElem = document.createElement('div');
+        dateElem.innerText = `تاريخ التقرير: ${new Date().toLocaleString('ar-EG')}`;
+        dateElem.style.textAlign = 'center';
+        dateElem.style.marginBottom = '20px';
+        cloneDiv.appendChild(dateElem);
+        const tableClone = tableElement.cloneNode(true);
+        // تعديل الألوان للطباعة
+        tableClone.querySelectorAll('th').forEach(th => { th.style.backgroundColor = '#e2e8f0'; th.style.color = '#1e293b'; th.style.border = '1px solid #aaa'; });
+        tableClone.querySelectorAll('td').forEach(td => { td.style.backgroundColor = 'white'; td.style.color = 'black'; td.style.border = '1px solid #aaa'; });
+        cloneDiv.appendChild(tableClone);
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write('<html><head><title>' + title + '</title><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet"></head><body>' + cloneDiv.outerHTML + '</body></html>');
+        printWindow.document.close();
+        printWindow.print();
+        document.title = originalTitle;
+    }
+
+    function printAllPages() { window.print(); }
+
+    // ربط الأزرار
+    document.getElementById('copyAllTablesBtn').addEventListener('click', copyAllTables);
+    document.getElementById('printAllBtn').addEventListener('click', printAllPages);
+    document.querySelectorAll('.copy-section').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const section = btn.getAttribute('data-section');
+            let container, title;
+            if (section === 'all') { container = '#allSitesContainer .data-table'; title = 'جميع المواقع'; }
+            else if (section === 'overdue') { container = '#overdueContainer .data-table'; title = 'المواقع المتجاوزة 300 ساعة'; }
+            else if (section === 'changed') { container = '#changedOilContainer .data-table'; title = 'المواقع المحدثة حديثاً'; }
+            else { container = '#filterContainer .data-table'; title = 'المواقع التي تحتاج فلتر'; }
+            const table = document.querySelector(container);
+            copyTable(table, title);
+        });
+    });
+    document.querySelectorAll('.single-print-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const printType = btn.getAttribute('data-print');
+            let container, title;
+            if (printType === 'all') { container = '#allSitesContainer .data-table'; title = 'جميع المواقع (آخر صيانة زيت + فلاتر)'; }
+            else if (printType === 'overdue') { container = '#overdueContainer .data-table'; title = 'المواقع التي تجاوزت 300 ساعة'; }
+            else if (printType === 'changed') { container = '#changedOilContainer .data-table'; title = 'المواقع التي تم تغيير زيتها مؤخراً'; }
+            else { container = '#filterContainer .data-table'; title = 'المواقع التي تحتاج تغيير فلتر'; }
+            const table = document.querySelector(container);
+            if (table) printSingleTable(table, title);
+            else alert('لا يوجد جدول للطباعة بعد');
+        });
+    });
+
+    loadData();
+    setInterval(loadData, 60000);
+</script>
+<script>
+// ============================================================
+//  عرض المولدات المتجاوزة 300 ساعة في حالة الزيت المتقدمة
+//  أضف هذا الكود في نهاية oil_status.html (قبل </body>)
+// ============================================================
+(function() {
+
+    function getOverdueSites() {
+        try {
+            var allStatus = JSON.parse(localStorage.getItem('oilOverdueStatus') || '{}');
+            var overdue = [];
+            for (var site in allStatus) {
+                if (allStatus[site].isOverdue) {
+                    overdue.push({
+                        site: site,
+                        currentHours: allStatus[site].currentHours,
+                        lastOilDate: allStatus[site].lastOilDate,
+                        lastOilHours: allStatus[site].lastOilHours,
+                        diff: allStatus[site].diff,
+                        remaining: allStatus[site].remaining
+                    });
+                }
+            }
+            overdue.sort(function(a, b) { return b.diff - a.diff; });
+            return overdue;
+        } catch(e) {
+            return [];
+        }
+    }
+
+    function addOverdueSection() {
+        var overdueList = getOverdueSites();
+        if (overdueList.length === 0) return;
+
+        var container = document.querySelector('.container');
+        if (!container) return;
+
+        var existingSection = document.getElementById('overdueStatusSection');
+        if (existingSection) existingSection.remove();
+
+        var section = document.createElement('div');
+        section.id = 'overdueStatusSection';
+        section.className = 'section';
+        section.style.cssText = 'border-color:#ef4444; background:rgba(239,68,68,0.08);';
+
+        var html = '<div class="section-title" style="color:#ef4444;">🚨 مولدات تجاوزت 300 ساعة من آخر تغيير زيت</div>';
+        html += '<div style="overflow-x:auto;">';
+        html += '<table class="data-table">';
+        html += '<thead><tr><th>#</th><th>اسم الموقع</th><th>العداد الحالي</th><th>آخر تغيير زيت</th><th>العداد عند التغيير</th><th>المشي (ساعة)</th><th>تجاوز بـ</th></tr></thead><tbody>';
+
+        overdueList.forEach(function(item, idx) {
+            html += '<tr style="background:rgba(239,68,68,0.15);">';
+            html += '<td>' + (idx+1) + '</td>';
+            html += '<td style="font-weight:800;">' + item.site + '</td>';
+            html += '<td>' + item.currentHours + ' H</td>';
+            html += '<td>' + item.lastOilDate + '</td>';
+            html += '<td>' + item.lastOilHours + ' H</td>';
+            html += '<td style="color:#f97316; font-weight:bold;">' + item.diff + ' ساعة</td>';
+            html += '<td style="color:#ef4444; font-weight:bold;">' + (item.diff - 300) + ' ساعة</td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+        section.innerHTML = html;
+
+        // إدراج بعد القسم الأول (جميع المواقع)
+        var firstSection = document.querySelector('.section');
+        if (firstSection) {
+            firstSection.insertAdjacentElement('afterend', section);
+        } else {
+            container.prepend(section);
+        }
+    }
+
+    function initOverdueStatus() {
+        addOverdueSection();
+        setInterval(addOverdueSection, 30000);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initOverdueStatus);
+    } else {
+        initOverdueStatus();
+    }
+
+})();
+</script>
+</body>
+</html>
