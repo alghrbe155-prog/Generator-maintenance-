@@ -2,7 +2,7 @@
   "name": "نظام المهندس إبراهيم الغربي",
   "short_name": "نظام المولدات",
   "description": "نظام متكامل لإدارة صيانة المولدات وتغيير الزيت",
-  "start_url": "y.html",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#020617",
   "theme_color": "#00c6ff",
