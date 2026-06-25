@@ -1,0 +1,4083 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>⚡ نظام المهندس إبراهيم الغربي - النسخة النهائية</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <script>
+// ============================================================
+//  تحميل Firebase بشكل غير متزامن مع مهلة (Timeout) لمنع التعليق
+// ============================================================
+(function loadFirebaseWithTimeout() {
+    // نعرض البيانات المحلية فوراً (بدون انتظار Firebase)
+    if (typeof loadLocalDataImmediately === 'function') {
+        loadLocalDataImmediately();
+    } else {
+        // دالة احتياطية لتحميل البيانات من localStorage
+        try {
+            let g = localStorage.getItem("generators");
+            let o = localStorage.getItem("oils");
+            let t = localStorage.getItem("trashItems");
+            if (g) window.generators = JSON.parse(g);
+            if (o) window.oils = JSON.parse(o);
+            if (t) window.trashItems = JSON.parse(t);
+            console.log('✅ تم تحميل البيانات من localStorage فوراً');
+        } catch(e) { console.warn('⚠️ فشل تحميل البيانات المحلية:', e); }
+    }
+
+    // مؤقت لإنهاء المحاولة بعد 3 ثوانٍ (حتى لا يعلق التطبيق)
+    let timeoutId = setTimeout(() => {
+        console.warn('⏰ انتهت مهلة تحميل Firebase، سيتم العمل محلياً فقط');
+        window.firebaseAvailable = false;
+        window.database = null;
+        // إخفاء أي مؤشر تحميل إن وجد
+        document.querySelectorAll('.loading-indicator').forEach(el => el.style.display = 'none');
+    }, 3000);
+
+    // تحميل الملف الأول
+    let script1 = document.createElement('script');
+    script1.src = 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js';
+    script1.async = true;
+    script1.onload = () => console.log('✅ تم تحميل firebase-app.js');
+    script1.onerror = () => console.warn('⚠️ فشل تحميل firebase-app.js');
+    document.head.appendChild(script1);
+
+    // تحميل الملف الثاني
+    let script2 = document.createElement('script');
+    script2.src = 'https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js';
+    script2.async = true;
+    script2.onload = function() {
+        clearTimeout(timeoutId); // إلغاء المؤقت عند النجاح
+        try {
+            if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+                const config = {
+                    apiKey: "AIzaSyBwqIx4ZfEHKvYzLwnw5npl2My3YGO6zOQ",
+                    authDomain: "generators-cf3f8.firebaseapp.com",
+                    projectId: "generators-cf3f8",
+                    storageBucket: "generators-cf3f8.firebasestorage.app",
+                    messagingSenderId: "1069488150812",
+                    appId: "1:1069488150812:web:a3481e4fdf6ac0b68942d9",
+                    measurementId: "G-ZKK2LP22MN",
+                    databaseURL: "https://generators-cf3f8-default-rtdb.firebaseio.com"
+                };
+                firebase.initializeApp(config);
+                window.database = firebase.database();
+                window.firebaseAvailable = true;
+                console.log('✅ Firebase جاهز بعد ' + ((Date.now() - startTime)/1000).toFixed(1) + ' ثانية');
+                // محاولة تحميل البيانات من Firebase في الخلفية
+                if (typeof window.syncData === 'function') {
+                    window.syncData();
+                }
+            }
+        } catch(e) {
+            console.warn('⚠️ فشل تهيئة Firebase:', e);
+            window.firebaseAvailable = false;
+            window.database = null;
+        }
+    };
+    script2.onerror = function() {
+        clearTimeout(timeoutId);
+        console.warn('⚠️ فشل تحميل firebase-database.js، العمل محلياً');
+        window.firebaseAvailable = false;
+        window.database = null;
+    };
+    document.head.appendChild(script2);
+
+    const startTime = Date.now();
+    console.log('🔄 جاري تحميل Firebase مع مهلة 3 ثوانٍ...');
+})();
+</script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- استدعاء ملف المواقع الخارجي -->
+    <script src="sites_data.js"></script>
+    <style>
+        /* جميع الأنماط كما هي دون تغيير - تم الحفاظ على التنسيقات السابقة */
+        :root {
+            --primary: #00c6ff;
+            --secondary: #0072ff;
+            --accent: #f59e0b;
+            --bg: #020617;
+            --card-bg: #0f172ad9;
+            --text: #f8fafc;
+            --danger: #ef4444;
+            --success: #10b981;
+            --oil-color: #3b82f6;
+            --gen-color: #f59e0b;
+            --glow: 0 0 15px rgba(0,198,255,0.5);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Cairo', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background: radial-gradient(circle at 20% 30%, #020617, #000000); color: var(--text); padding-bottom: 110px; overflow-x: hidden; }
+        .header { background: linear-gradient(135deg, rgba(15,23,42,0.95), rgba(0,114,255,0.7)); backdrop-filter: blur(10px); padding: 12px 20px; position: sticky; top: 0; z-index: 100; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--primary); }
+        .header h1 { font-size: 20px; font-weight: 900; text-shadow: 0 0 10px var(--primary); }
+        .user-icon { background: rgba(255,255,255,0.1); border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; border: 1px solid var(--primary); }
+        .sidebar { position: fixed; top: 0; right: -100%; width: 300px; height: 100%; background: rgba(15,23,42,0.98); backdrop-filter: blur(20px); z-index: 10000; transition: 0.4s; padding: 30px 20px; border-left: 2px solid var(--primary); display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
+        .sidebar.open { right: 0; }
+        .sidebar button { background: var(--danger); border: none; padding: 12px; border-radius: 40px; color: white; font-weight: 800; cursor: pointer; width: 100%; }
+        .sidebar .btn-secondary { background: #1e293b; border: 1px solid var(--primary); color: var(--primary); }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; display: none; }
+        .page { display: none; padding: 20px; animation: floatIn 0.3s ease; }
+        .active { display: block; }
+        @keyframes floatIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .card { background: var(--card-bg); backdrop-filter: blur(12px); border-radius: 35px; padding: 25px; margin-bottom: 20px; border: 1px solid rgba(0,198,255,0.2); box-shadow: 0 20px 35px rgba(0,0,0,0.5), var(--glow); }
+        .card-title { font-weight: 800; margin-bottom: 20px; font-size: 20px; background: linear-gradient(45deg, #fff, var(--primary)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        input, textarea, select { width: 100%; padding: 18px; border-radius: 25px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; color: white; font-size: 16px; margin-bottom: 15px; }
+        input:focus { border-color: var(--primary); box-shadow: 0 0 15px var(--primary); }
+        button { width: 100%; padding: 18px; border: none; border-radius: 30px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 16px; }
+        .btn-save { background: linear-gradient(45deg, var(--secondary), var(--primary)); color: white; }
+        .btn-outline { background: rgba(255,255,255,0.08); border: 1px solid var(--primary); color: var(--primary); }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; background: #0f172a; padding: 5px; border-radius: 20px; }
+        .tab { flex: 1; padding: 12px; text-align: center; border-radius: 15px; font-weight: 800; cursor: pointer; }
+        .tab.active { background: var(--primary); color: #020617; }
+        .record { background: linear-gradient(145deg, #ffffff, #f1f5f9); color: #1e293b; border-radius: 32px; padding: 22px; margin-bottom: 20px; border-right: 8px solid var(--primary); position: relative; }
+        .type-badge { position: absolute; top: -12px; right: 20px; padding: 6px 18px; border-radius: 30px; font-size: 12px; color: white; font-weight: 800; }
+        .nav { position: fixed; bottom: 20px; left: 20px; right: 20px; height: 80px; background: rgba(15,23,42,0.95); backdrop-filter: blur(25px); border-radius: 40px; display: flex; justify-content: space-around; align-items: center; z-index: 2000; }
+        .nav-item { color: #94a3b8; font-size: 28px; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
+        .nav-item.active { color: var(--primary); transform: translateY(-5px); }
+        .nav-item span { font-size: 11px; font-weight: 800; margin-top: 4px; }
+        #toast { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: var(--success); color: white; padding: 15px 30px; border-radius: 50px; font-weight: 800; z-index: 9999; transition: 0.4s; }
+        .alarm-box { background: rgba(239,68,68,0.2); border: 2px solid var(--danger); border-radius: 20px; padding: 15px; margin-top: 15px; animation: pulseRed 1s infinite; }
+        @keyframes pulseRed { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); } 100% { box-shadow: 0 0 0 15px rgba(239,68,68,0); } }
+        .export-btn { background: #0f172a; color: white; padding: 8px 12px; font-size: 13px; border-radius: 15px; cursor: pointer; display: inline-block; margin: 5px; text-align: center; }
+        .status-red { background: #ef4444; color: white; padding: 5px 12px; border-radius: 20px; display: inline-block; font-weight: 800; }
+        .status-yellow { background: #f59e0b; color: white; padding: 5px 12px; border-radius: 20px; display: inline-block; font-weight: 800; }
+        .status-green { background: #10b981; color: white; padding: 5px 12px; border-radius: 20px; display: inline-block; font-weight: 800; }
+        .big-numbers-row { display: flex; gap: 20px; flex-wrap: wrap; margin: 12px 0; align-items: center; }
+        .number-card { background: #1e293b; border-radius: 20px; padding: 12px 20px; text-align: center; flex: 1; min-width: 120px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .number-card span:first-child { font-size: 14px; color: #94a3b8; display: block; margin-bottom: 5px; }
+        .number-card .big-number { font-size: 28px; font-weight: 900; color: white; background: linear-gradient(135deg, #00c6ff, #0072ff); display: inline-block; padding: 6px 18px; border-radius: 40px; letter-spacing: 1px; }
+        .countdown-card { background: linear-gradient(135deg, #0f172a, #0a0f1c); border-radius: 28px; padding: 12px 15px; margin-bottom: 16px; border-right: 6px solid var(--accent); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .countdown-card.critical { border-right-color: var(--danger); background: #2d1a1a; }
+        .countdown-days { font-size: 24px; font-weight: 900; background: rgba(0,198,255,0.2); padding: 6px 14px; border-radius: 60px; }
+        .welcome-banner { background: linear-gradient(90deg, #00c6ff, #0072ff); padding: 15px; margin: 15px 20px; border-radius: 30px; text-align: center; font-weight: 900; }
+        .search-dropdown { background: #1e293b; border: 1px solid var(--primary); border-radius: 20px; max-height: 200px; overflow-y: auto; position: absolute; width: 100%; z-index: 3000; }
+        .search-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #334155; color: white; }
+        .search-results-container { position: relative; }
+        .home-card-icon { font-size: 55px; margin-bottom: 10px; }
+        
+        /* Modal لتغيير كلمة المرور */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background: #1e293b;
+            border-radius: 30px;
+            padding: 25px;
+            width: 90%;
+            max-width: 350px;
+            text-align: center;
+            border: 2px solid var(--primary);
+            box-shadow: 0 0 30px rgba(0,198,255,0.3);
+        }
+        .modal-content h3 {
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+        .modal-content input {
+            width: 100%;
+            padding: 14px;
+            margin: 10px 0;
+            border-radius: 25px;
+            border: none;
+            background: #0f172a;
+            color: white;
+            text-align: center;
+            font-size: 16px;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .modal-buttons button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 30px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn-confirm { background: var(--primary); color: #020617; }
+        .btn-cancel { background: #334155; color: white; }
+        
+        /* إضافة لعرض الكود */
+        .code-display {
+            background: #1e293b;
+            border-radius: 15px;
+            padding: 12px;
+            margin-bottom: 15px;
+            display: none;
+            font-weight: 800;
+            color: #00c6ff;
+            text-align: center;
+            border: 1px solid #00c6ff;
+        }
+    </style>
+</head>
+<body>
+
+<div id="loginScreen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:radial-gradient(circle at center, #020617, #000000); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px;">
+    <div style="width:100%; max-width:400px; background:#1e293bdd; backdrop-filter: blur(15px); padding:35px; border-radius:40px; border:1px solid var(--primary); text-align:center;">
+        <h2 style="color:#00c6ff;">🔐 نظام السكورتي</h2>
+        <p style="margin-bottom:25px;">أدخل رقم الجوال وكلمة المرور</p>
+        <input type="text" id="loginPhone" placeholder="📱 رقم الجوال" style="margin-bottom:15px;">
+        <input type="password" id="loginPass" placeholder="🔑 كلمة السر" style="margin-bottom:20px;">
+        <button class="btn-save" onclick="loginSystem()">دخول النظام</button>
+        <div id="loginError" style="color:#ef4444; margin-top:15px; display:none;">بيانات الدخول غير صحيحة</div>
+    </div>
+</div>
+
+<div id="toast">✅ تمت العملية بنجاح!</div>
+
+<div class="header">
+    <div></div>
+    <div><h1>⚡ نظام المهندس إبراهيم الغربي</h1></div>
+    <div class="user-icon" onclick="toggleSidebar()">👤</div>
+</div>
+
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+<div class="sidebar" id="sidebar">
+    <div style="text-align:center; font-size:80px;">👨‍🔧</div>
+    <div style="font-size:22px; font-weight:800; text-align:center; color:var(--primary);" id="sidebarName">المهندس</div>
+    <div style="text-align:center; color:#94a3b8;" id="sidebarPhone">رقم الجوال</div>
+    <button class="btn-secondary" onclick="openPasswordModal()">🔐 تغيير كلمة المرور</button>
+    <!-- زر إضافة مستخدم جديد (يظهر فقط للمهندس إبراهيم) -->
+    <button id="addUserBtn" class="btn-secondary" style="display:none;" onclick="openAddUserModal()">👥 إضافة مستخدم جديد</button>
+    <button onclick="logoutSystem()">🚪 تسجيل الخروج</button>
+</div>
+
+<!-- Modal لتغيير كلمة المرور -->
+<div id="passwordModal" class="modal">
+    <div class="modal-content">
+        <h3>🔐 تغيير كلمة المرور</h3>
+        <input type="password" id="modalOldPass" placeholder="كلمة المرور الحالية">
+        <input type="password" id="modalNewPass" placeholder="كلمة المرور الجديدة (4 أحرف على الأقل)">
+        <div class="modal-buttons">
+            <button class="btn-cancel" onclick="closePasswordModal()">إلغاء</button>
+            <button class="btn-confirm" onclick="confirmPasswordChange()">تأكيد</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal لإضافة مستخدم جديد -->
+<div id="addUserModal" class="modal">
+    <div class="modal-content">
+        <h3>👥 إضافة مستخدم جديد</h3>
+        <input type="text" id="newUserPhone" placeholder="رقم الجوال (مثال: 733111111)" dir="ltr">
+        <input type="text" id="newUserName" placeholder="الاسم الكامل">
+        <input type="password" id="newUserPassword" placeholder="كلمة المرور (اتركها = 123456)">
+        <div class="modal-buttons">
+            <button class="btn-cancel" onclick="closeAddUserModal()">إلغاء</button>
+            <button class="btn-confirm" onclick="confirmAddUser()">إضافة</button>
+        </div>
+    </div>
+</div>
+
+<div id="welcomeUser" class="welcome-banner">👨‍🔧 أهلًا وسهلًا</div>
+
+<div id="home" class="page active">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+        <div class="card" onclick="go('generator')" style="text-align:center; cursor:pointer;"><div class="home-card-icon">⚙️🔧</div><strong>زيارة صيانة (مولد)</strong></div>
+        <div class="card" onclick="go('oil')" style="text-align:center; cursor:pointer;"><div class="home-card-icon">🛢️💧</div><strong>تغيير زيت</strong></div>
+        <div class="card" onclick="go('alarm')" style="grid-column:span 2; text-align:center; border-color:#ef4444;"><div style="font-size:55px;">🚨</div><strong>مركز الطوارئ</strong></div>
+    </div>
+    <div class="card"><div class="card-title">⏳ عداد الصيانة التنازلي</div><div id="countdownList"></div></div>
+    <div class="card" onclick="window.location.href='generator_reports_page.html'" style="cursor:pointer; display:flex; justify-content:space-between;"><span>📋 تقارير الزيارات وحالة الزيت</span><span>◀️</span></div>
+    <div class="card" onclick="go('records')" style="cursor:pointer; display:flex; justify-content:space-between;"><span>🗂️ مركز السجلات والبيانات</span><span>◀️</span></div>
+    <div class="card" onclick="window.location.href='oil_reports_page.html'" style="cursor:pointer; display:flex; justify-content:space-between;"><span>🛢️ تقارير الزيت والفلاتر</span><span>◀️</span></div>
+    <div class="card" onclick="window.location.href='oil_status.html'" style="cursor:pointer; display:flex; justify-content:space-between;"><span>🛢️ حالة الزيت (جدول متكامل)</span><span>◀️</span></div>
+    <div class="card" onclick="go('stats')" style="cursor:pointer; display:flex; justify-content:space-between;"><span>📊 لوحة التحكم</span><span>◀️</span></div>
+</div>
+
+<div id="generator" class="page">
+    <div class="card">
+        <div class="card-title">⚙️🔧 تقرير زيارة ميدانية (مولد)</div>
+        <input type="date" id="g_date">
+        <div class="search-results-container">
+            <label>الموقع</label>
+            <input type="text" id="g_site" placeholder="ابحث عن موقع..." onkeyup="searchSites('g_site','g_results')" onchange="toggleUnitField('g_site','g_unit_container')">
+            <div id="g_results" class="search-dropdown" style="display:none;"></div>
+        </div>
+        <div id="g_unit_container" style="display:none;">
+            <label>رقم المولد (لـ النخيله فقط)</label>
+            <select id="g_unit"><option value="1">مولد 1</option><option value="2">مولد 2</option></select>
+        </div>
+        <!-- عرض الكود هنا -->
+        <div id="g_code_display" class="code-display"></div>
+        <input type="number" id="g_hours" placeholder="عداد الساعات" oninput="updateOilStatus()">
+        <input type="number" id="g_diesel" placeholder="مستوى الديزل (CM)">
+        <textarea id="g_note" rows="2" placeholder="ملاحظات المهندس"></textarea>
+        <div id="oilStatus" style="background:#1e293b; border-radius:20px; padding:15px; margin:10px 0; display:none;"></div>
+        <button class="btn-save" onclick="saveGenerator()">💎 حفظ السجل</button>
+        <button class="btn-outline" onclick="go('home')">العودة للرئيسية</button>
+    </div>
+</div>
+
+<div id="oil" class="page">
+    <div class="card">
+        <div class="card-title">🛢️💧 صيانة الزيت (300 ساعة)</div>
+        <input type="date" id="o_date">
+        <div class="search-results-container">
+            <label>الموقع</label>
+            <input type="text" id="o_site" onkeyup="searchSites('o_site','o_results')" onchange="toggleUnitField('o_site','o_unit_container')">
+            <div id="o_results" class="search-dropdown" style="display:none;"></div>
+        </div>
+        <div id="o_unit_container" style="display:none;">
+            <label>رقم المولد</label>
+            <select id="o_unit"><option value="1">مولد 1</option><option value="2">مولد 2</option></select>
+        </div>
+        <!-- عرض الكود هنا -->
+        <div id="o_code_display" class="code-display"></div>
+        <input type="number" id="o_current" placeholder="العداد الحالي (ساعة)">
+        <input type="number" id="o_diesel" placeholder="قياس الديزل (CM)">
+        <input type="number" id="o_avgDaily" placeholder="متوسط ساعات التشغيل اليومي" step="0.5">
+        <div style="margin-top:15px; padding:15px; background:rgba(255,255,255,0.05); border-radius:20px;">
+            <label>الفلاتر المستبدلة:</label>
+            <div style="display:flex; gap:15px; margin-top:10px;">
+                <label><input type="checkbox" id="f_oil"> زيت</label>
+                <label><input type="checkbox" id="f_diesel"> ديزل</label>
+                <label><input type="checkbox" id="f_air"> هواء</label>
+            </div>
+        </div>
+        <button class="btn-save" style="background:var(--oil-color)" onclick="saveOil()">🚀 اعتماد الصيانة</button>
+        <button class="btn-outline" onclick="go('home')">خروج</button>
+    </div>
+</div>
+
+<div id="records" class="page">
+    <input type="text" id="search" placeholder="🔍 بحث عن موقع أو تاريخ..." onkeyup="renderRecords()">
+    <div class="tabs">
+        <div class="tab active" onclick="setTab('all',this)">الكل</div>
+        <div class="tab" onclick="setTab('gen',this)">الزيارات</div>
+        <div class="tab" onclick="setTab('oil',this)">الزيت</div>
+        <div class="tab" onclick="setTab('trash',this)">🗑️ سلة المهملات</div>
+    </div>
+    <div style="display:flex; gap:10px; margin-bottom:15px;">
+        <button class="btn-save" onclick="exportData()" style="background:#128C7E;">💬 تقرير سريع</button>
+        <button class="btn-save" onclick="backupData()" style="background:#4338ca;">📥 نسخة احتياطية</button>
+    </div>
+    <div id="recordsList"></div>
+</div>
+
+<div id="stats" class="page">
+    <div class="card"><div class="card-title">📈 تحليل استهلاك المولدات</div><canvas id="chart" style="max-height:300px;"></canvas></div>
+    <div class="card"><div class="card-title">⛽ أكثر المولدات استهلاكاً للديزل</div><div id="dieselConsumptionList"></div></div>
+</div>
+
+<div id="alarm" class="page">
+    <div class="card"><div class="card-title">🚨 المولدات المستحقة خلال يومين</div><div id="alarmList"></div></div>
+</div>
+
+<div class="nav">
+    <div class="nav-item active" onclick="go('home',this)">🏠<span>الرئيسية</span></div>
+    <div class="nav-item" onclick="go('records',this)">📋<span>السجلات</span></div>
+    <div class="nav-item" onclick="go('stats',this)">📊<span>إحصاء</span></div>
+</div>
+
+<script>
+    // Firebase Config
+    const firebaseConfig = {
+        apiKey: "AIzaSyBwqIx4ZfEHKvYzLwnw5npl2My3YGO6zOQ",
+        authDomain: "generators-cf3f8.firebaseapp.com",
+        projectId: "generators-cf3f8",
+        storageBucket: "generators-cf3f8.firebasestorage.app",
+        messagingSenderId: "1069488150812",
+        appId: "1:1069488150812:web:a3481e4fdf6ac0b68942d9",
+        measurementId: "G-ZKK2LP22MN",
+        databaseURL: "https://generators-cf3f8-default-rtdb.firebaseio.com"
+    };
+    
+    let firebaseAvailable = false;
+    try { firebase.initializeApp(firebaseConfig); firebaseAvailable = true; } catch(e) { console.warn(e); }
+    const database = firebaseAvailable ? firebase.database() : null;
+    
+    // المستخدمون (تم إضافة ابوبكر منصور الحكيمي)
+    let users = { 
+        "738501114": { name: "عمار الحمادي", password: "123456" },
+        "733123004": { name: "عيسى القباطي", password: "123456" },
+        "733121764": { name: "نذير عمر ضاحة", password: "123456" },
+        "738197187": { name: "ابراهيم الغربي", password: "123456" },
+        "738197197": { name: "ابراهيم الغربي", password: "123456" },
+        "733111272": { name: "ابوبكر منصور الحكيمي", password: "123456" }
+    };
+    
+    let generators = [], oils = [], trashItems = [];
+    let editIndex = -1, editType = "", currentTab = "all";
+    let allSites = [];
+    let currentUserPhone = "", currentUserName = "";
+    let reminderInterval = null;
+    let nextRecordId = 1;
+    
+    const multiUnitSites = ["النخيله", "بالمس فلح", "النخيله (بالمس فلح)"];
+    
+    function saveToLocal() {
+        localStorage.setItem("generators", JSON.stringify(generators));
+        localStorage.setItem("oils", JSON.stringify(oils));
+        localStorage.setItem("trashItems", JSON.stringify(trashItems));
+        localStorage.setItem("nextRecordId", nextRecordId);
+    }
+    function pushToFirebase() { if(database) { database.ref('generators').set(generators); database.ref('oils').set(oils); database.ref('trash').set(trashItems); database.ref('users').set(users); } saveToLocal(); }
+    function loadFromStorage() {
+        let g = localStorage.getItem("generators"), o = localStorage.getItem("oils"), t = localStorage.getItem("trashItems"), sid = localStorage.getItem("nextRecordId");
+        if(sid) nextRecordId = parseInt(sid);
+        if(g && o && t) { generators = JSON.parse(g); oils = JSON.parse(o); trashItems = JSON.parse(t); }
+        else { generators = []; oils = []; trashItems = []; }
+    }
+    function generateId() { return nextRecordId++; }
+    
+    function daysRemaining(nextDate) {
+        if(!nextDate) return Infinity;
+        let today = new Date(); today.setHours(0,0,0,0);
+        let target = new Date(nextDate); target.setHours(0,0,0,0);
+        return Math.ceil((target - today) / (1000*60*60*24));
+    }
+    function calcNextDate(currentHours, avgDaily, recordDate = new Date()) {
+        if(!avgDaily || avgDaily<=0) return null;
+        let daysNeeded = Math.ceil(300 / avgDaily);
+        let target = new Date(recordDate);
+        target.setDate(target.getDate() + daysNeeded);
+        return target.toISOString().split('T')[0];
+    }
+    function isAlarmDue(nextDate) { let d = daysRemaining(nextDate); return d >= 0 && d <= 2; }
+    
+    function toggleUnitField(siteInputId, containerId) {
+        let site = document.getElementById(siteInputId).value.trim();
+        let container = document.getElementById(containerId);
+        if (multiUnitSites.includes(site)) container.style.display = "block";
+        else container.style.display = "none";
+    }
+    function getFullSiteName(site, unitValue) {
+        if (multiUnitSites.includes(site) && unitValue) return `${site} - مولد ${unitValue}`;
+        return site;
+    }
+    
+    function updateOilStatus() {
+        let site = document.getElementById("g_site").value.trim();
+        let currentHours = parseFloat(document.getElementById("g_hours").value);
+        let statusDiv = document.getElementById("oilStatus");
+        if(!site || isNaN(currentHours)) { statusDiv.style.display = "none"; return; }
+        let siteOils = oils.filter(o => o.site === site || o.site.startsWith(site+" - مولد")).sort((a,b)=>new Date(b.date)-new Date(a.date));
+        let lastOil = siteOils[0];
+        let oilCurrent = lastOil ? lastOil.current : 0;
+        let consumed = currentHours - oilCurrent;
+        let remaining = 300 - consumed;
+        let html = `<div style="font-weight:800;">🛢️ حالة الزيت لموقع: ${site}</div>`;
+        if(lastOil) html += `<div>📅 آخر تغيير: ${lastOil.date} (عداد: ${oilCurrent})</div><div>⏱️ منذ التغيير: ${consumed} ساعة</div><div>⏳ المتبقي: ${remaining > 0 ? remaining + ' ساعة' : '⚠️ تجاوز ' + Math.abs(remaining) + ' ساعة'}</div>`;
+        else html += `<div>⚠️ لا يوجد سجل تغيير زيت سابق.</div>`;
+        statusDiv.innerHTML = html; statusDiv.style.display = "block";
+    }
+    
+    function resetGeneratorForm() {
+        document.getElementById("g_date").value = "";
+        document.getElementById("g_site").value = "";
+        document.getElementById("g_unit_container").style.display = "none";
+        document.getElementById("g_hours").value = "";
+        document.getElementById("g_diesel").value = "";
+        document.getElementById("g_note").value = "";
+        document.getElementById("oilStatus").style.display = "none";
+        document.getElementById("g_code_display").style.display = "none";
+        editIndex = -1;
+        editType = "";
+    }
+    
+    function resetOilForm() {
+        document.getElementById("o_date").value = "";
+        document.getElementById("o_site").value = "";
+        document.getElementById("o_unit_container").style.display = "none";
+        document.getElementById("o_current").value = "";
+        document.getElementById("o_diesel").value = "";
+        document.getElementById("o_avgDaily").value = "";
+        document.getElementById("f_oil").checked = false;
+        document.getElementById("f_diesel").checked = false;
+        document.getElementById("f_air").checked = false;
+        document.getElementById("o_code_display").style.display = "none";
+        editIndex = -1;
+        editType = "";
+    }
+    
+    function saveGenerator() {
+        let site = document.getElementById("g_site").value.trim();
+        if(!site) { showToast("⚠️ أدخل الموقع", "error"); return; }
+        let unit = document.getElementById("g_unit").value;
+        let fullSite = getFullSiteName(site, unit);
+        let hours = parseFloat(document.getElementById("g_hours").value);
+        let diesel = parseFloat(document.getElementById("g_diesel").value);
+        if(isNaN(hours)) { showToast("⚠️ أدخل العداد", "error"); return; }
+        let data = {
+            id: generateId(),
+            recordedBy: currentUserName,
+            recordedByPhone: currentUserPhone,
+            date: document.getElementById("g_date").value || new Date().toISOString().split('T')[0],
+            site: fullSite,
+            hours: hours,
+            diesel: isNaN(diesel) ? 0 : diesel,
+            note: document.getElementById("g_note").value || ""
+        };
+        if(editIndex > -1 && editType === 'gen') {
+            if(generators[editIndex].recordedByPhone !== currentUserPhone && generators[editIndex].recordedBy !== currentUserName) {
+                showToast("❌ لا يمكنك تعديل سجل ليس لك", "error"); return;
+            }
+            data.id = generators[editIndex].id;
+            generators[editIndex] = data;
+            editIndex = -1; editType = "";
+        } else generators.push(data);
+        pushToFirebase();
+        playSave();
+        showToast("✅ تم حفظ الزيارة");
+        resetGeneratorForm();
+        go('records');
+    }
+    
+    function saveOil() {
+        let site = document.getElementById("o_site").value.trim();
+        if(!site) { showToast("⚠️ أدخل الموقع", "error"); return; }
+        let unit = document.getElementById("o_unit").value;
+        let fullSite = getFullSiteName(site, unit);
+        let current = parseFloat(document.getElementById("o_current").value);
+        let diesel = parseFloat(document.getElementById("o_diesel").value);
+        let avg = parseFloat(document.getElementById("o_avgDaily").value);
+        if(isNaN(current) || isNaN(avg) || avg<=0) { showToast("⚠️ أكمل البيانات", "error"); return; }
+        let recordDate = document.getElementById("o_date").value ? new Date(document.getElementById("o_date").value) : new Date();
+        let nextDate = calcNextDate(current, avg, recordDate);
+        let data = {
+            id: generateId(),
+            recordedBy: currentUserName,
+            recordedByPhone: currentUserPhone,
+            date: recordDate.toISOString().split('T')[0],
+            site: fullSite,
+            current: current,
+            diesel: isNaN(diesel) ? 0 : diesel,
+            avgDailyHours: avg,
+            nextDate: nextDate,
+            filters: {
+                oil: document.getElementById("f_oil").checked,
+                diesel: document.getElementById("f_diesel").checked,
+                air: document.getElementById("f_air").checked
+            }
+        };
+        if(editIndex > -1 && editType === 'oil') {
+            if(oils[editIndex].recordedByPhone !== currentUserPhone && oils[editIndex].recordedBy !== currentUserName) {
+                showToast("❌ لا يمكنك تعديل سجل ليس لك", "error"); return;
+            }
+            data.id = oils[editIndex].id;
+            oils[editIndex] = data;
+            editIndex = -1; editType = "";
+        } else oils.push(data);
+        pushToFirebase();
+        if(isAlarmDue(nextDate)) { playAlarm(); showToast(`🚨 إنذار: ${fullSite} يتبقى يومان`, "error"); }
+        else playSave();
+        showToast("✅ سجلت الصيانة");
+        resetOilForm();
+        go('records');
+    }
+    
+    function moveToTrash(recordId, type) {
+        let deletedItem = null;
+        if(type === 'gen') {
+            let idx = generators.findIndex(g => g.id == recordId);
+            if(idx !== -1) {
+                if(generators[idx].recordedByPhone !== currentUserPhone && generators[idx].recordedBy !== currentUserName) {
+                    showToast("❌ لا يمكنك حذف سجل ليس لك", "error"); return;
+                }
+                deletedItem = generators[idx];
+                generators.splice(idx,1);
+            }
+        } else {
+            let idx = oils.findIndex(o => o.id == recordId);
+            if(idx !== -1) {
+                if(oils[idx].recordedByPhone !== currentUserPhone && oils[idx].recordedBy !== currentUserName) {
+                    showToast("❌ لا يمكنك حذف سجل ليس لك", "error"); return;
+                }
+                deletedItem = oils[idx];
+                oils.splice(idx,1);
+            }
+        }
+        if(deletedItem) {
+            trashItems.push({ type, data: deletedItem, deletedAt: Date.now() });
+            pushToFirebase();
+            playDelete();
+            showToast("🗑️ تم نقل السجل إلى سلة المهملات");
+            renderRecords();
+        }
+    }
+    
+    function restoreFromTrash(trashIndex) {
+        let item = trashItems[trashIndex];
+        if(!item) return;
+        if(item.type === 'gen') generators.push(item.data);
+        else oils.push(item.data);
+        trashItems.splice(trashIndex,1);
+        pushToFirebase();
+        playSave();
+        showToast("♻️ تم استرجاع السجل");
+        renderRecords();
+    }
+    
+    function permanentDeleteFromTrash(trashIndex) {
+        trashItems.splice(trashIndex,1);
+        pushToFirebase();
+        playDelete();
+        showToast("✅ تم حذف السجل نهائياً");
+        renderRecords();
+    }
+    
+    function editRecord(recordId, type) {
+        if(type === 'gen') {
+            let idx = generators.findIndex(g => g.id == recordId);
+            if(idx === -1) return;
+            let r = generators[idx];
+            if(r.recordedByPhone !== currentUserPhone && r.recordedBy !== currentUserName) {
+                showToast("❌ ليس لديك صلاحية تعديل هذا السجل", "error");
+                return;
+            }
+            editIndex = idx; editType = 'gen';
+            document.getElementById("g_date").value = r.date;
+            let originalSite = r.site;
+            let match = originalSite.match(/^(.*?)\s*-\s*مولد\s*(\d+)$/);
+            if(match && multiUnitSites.includes(match[1])) {
+                document.getElementById("g_site").value = match[1];
+                document.getElementById("g_unit").value = match[2];
+                document.getElementById("g_unit_container").style.display = "block";
+            } else {
+                document.getElementById("g_site").value = originalSite;
+                document.getElementById("g_unit_container").style.display = "none";
+            }
+            document.getElementById("g_hours").value = r.hours;
+            document.getElementById("g_diesel").value = r.diesel || '';
+            document.getElementById("g_note").value = r.note || '';
+            go('generator');
+        } else {
+            let idx = oils.findIndex(o => o.id == recordId);
+            if(idx === -1) return;
+            let r = oils[idx];
+            if(r.recordedByPhone !== currentUserPhone && r.recordedBy !== currentUserName) {
+                showToast("❌ ليس لديك صلاحية تعديل هذا السجل", "error");
+                return;
+            }
+            editIndex = idx; editType = 'oil';
+            document.getElementById("o_date").value = r.date;
+            let originalSite = r.site;
+            let match = originalSite.match(/^(.*?)\s*-\s*مولد\s*(\d+)$/);
+            if(match && multiUnitSites.includes(match[1])) {
+                document.getElementById("o_site").value = match[1];
+                document.getElementById("o_unit").value = match[2];
+                document.getElementById("o_unit_container").style.display = "block";
+            } else {
+                document.getElementById("o_site").value = originalSite;
+                document.getElementById("o_unit_container").style.display = "none";
+            }
+            document.getElementById("o_current").value = r.current;
+            document.getElementById("o_diesel").value = r.diesel || '';
+            document.getElementById("o_avgDaily").value = r.avgDailyHours;
+            document.getElementById("f_oil").checked = r.filters?.oil || false;
+            document.getElementById("f_diesel").checked = r.filters?.diesel || false;
+            document.getElementById("f_air").checked = r.filters?.air || false;
+            go('oil');
+        }
+    }
+    
+    // ========== دالة للحصول على الكود من اسم الموقع (مع دعم المولدين) ==========
+    function getSiteCodeFromName(siteName) {
+        if (!siteName) return "";
+        // إذا كان الموقع من النوع "الاسم - مولد X"
+        let match = siteName.match(/^(.*?)\s*-\s*مولد\s*(\d+)$/);
+        let baseName = match ? match[1] : siteName;
+        let code = "";
+        if (typeof findSiteCode === 'function') {
+            code = findSiteCode(baseName);
+        }
+        // إذا كان هناك رقم مولد، نضيفه للكود
+        if (match && code) {
+            code = code + "-M" + match[2];
+        }
+        return code;
+    }
+    
+    function getRecordText(record, type) {
+        let code = getSiteCodeFromName(record.site);
+        let codeText = code ? `\n📌 الكود: ${code}` : "";
+        let text = `📋 *تقرير صيانة المولدات*\n👤 *المهندس:* ${record.recordedBy || 'غير معروف'}${codeText}\n`;
+        if(type === 'oil') {
+            text += `🛢️ *صيانة زيت*\n📍 ${record.site}\n📅 ${record.date}\n⏱️ العداد: ${record.current} H\n⛽ ديزل: ${record.diesel??0} CM\n`;
+            if(record.avgDailyHours) text += `⏱️ متوسط التشغيل: ${record.avgDailyHours} ساعة/يوم\n📅 التغيير القادم: ${record.nextDate}\n⏳ المتبقي: ${daysRemaining(record.nextDate)} يوم\n`;
+            text += `🔧 الفلاتر:\n✅ زيت: ${record.filters?.oil?"نعم":"لا"}\n✅ ديزل: ${record.filters?.diesel?"نعم":"لا"}\n✅ هواء: ${record.filters?.air?"نعم":"لا"}\n`;
+        } else {
+            text += `⚙️ *زيارة ميدانية (مولد)*\n📍 ${record.site}\n📅 ${record.date}\n⏱️ العداد: ${record.hours} H\n⛽ ديزل: ${record.diesel??0} CM\n`;
+            if(record.note) text += `📝 ${record.note}\n`;
+        }
+        return text;
+    }
+    
+    function copyRecordText(record, type) {
+        let txt = getRecordText(record, type);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(txt).catch(() => fallbackCopy(txt));
+        } else {
+            fallbackCopy(txt);
+        }
+    }
+    
+    function fallbackCopy(text) {
+        let ta = document.createElement("textarea");
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        showToast("📋 تم نسخ التقرير");
+    }
+    
+    function exportSingle(record, type) {
+        let txt = getRecordText(record, type);
+        let a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([txt], {type:"text/plain"}));
+        a.download = `${record.site}_${record.date}.txt`;
+        a.click();
+        showToast("📤 تم التصدير");
+    }
+    
+    function renderRecords() {
+        let search = document.getElementById("search").value.toLowerCase();
+        let html = "";
+        
+        if(currentTab === 'trash') {
+            let all = trashItems.map((item, idx) => ({ ...item.data, trashIndex: idx, type: item.type, isTrash: true }));
+            all.sort((a,b)=> new Date(b.date)-new Date(a.date));
+            for(let r of all) {
+                let isOil = (r.type === 'oil');
+                let color = isOil ? '#3b82f6' : '#f59e0b';
+                let icon = isOil ? '🛢️' : '⚙️';
+                html += `<div class="record" style="border-right-color:${color}; opacity:0.8;">
+                    <span class="type-badge" style="background:${color}">${icon} ${isOil?'صيانة زيت':'زيارة مولد'} [محذوف]</span>
+                    <div><strong>${r.site}</strong> <span>${isOil?r.current:r.hours} H</span></div>
+                    <div>📅 ${r.date}</div>
+                    <div style="display:flex; gap:8px; margin-top:15px;">
+                        <button class="export-btn" onclick="restoreFromTrash(${r.trashIndex})">♻️ استرجاع</button>
+                        <button class="export-btn" style="background:#fee2e2; color:red;" onclick="permanentDeleteFromTrash(${r.trashIndex})">🗑 حذف نهائي</button>
+                    </div>
+                </div>`;
+            }
+            document.getElementById("recordsList").innerHTML = html || "<div style='text-align:center; padding:40px;'>سلة المهملات فارغة</div>";
+            return;
+        }
+        
+        let latestGen = new Map();
+        let latestOil = new Map();
+        generators.forEach(g => {
+            let site = g.site;
+            if(!latestGen.has(site) || new Date(g.date) > new Date(latestGen.get(site).date)) latestGen.set(site, g);
+        });
+        oils.forEach(o => {
+            let site = o.site;
+            if(!latestOil.has(site) || new Date(o.date) > new Date(latestOil.get(site).date)) latestOil.set(site, o);
+        });
+        
+        let items = [];
+        if(currentTab === 'all' || currentTab === 'gen') items.push(...Array.from(latestGen.values()).map(r => ({...r, type:'gen'})));
+        if(currentTab === 'all' || currentTab === 'oil') items.push(...Array.from(latestOil.values()).map(r => ({...r, type:'oil'})));
+        items.sort((a,b)=> new Date(b.date)-new Date(a.date));
+        
+        for(let r of items) {
+            if(!r.site.toLowerCase().includes(search) && !r.date.includes(search)) continue;
+            let isOil = (r.type === 'oil');
+            let color = isOil ? '#3b82f6' : '#f59e0b';
+            let icon = isOil ? '🛢️' : '⚙️';
+            let days = (isOil && r.nextDate) ? daysRemaining(r.nextDate) : null;
+            let alarmHtml = (isOil && r.nextDate && days<=2 && days>=0) ? `<div class="alarm-box" style="margin-top:10px;">⚠️ يتبقى ${days} يوم فقط</div>` : '';
+            let statusClass = '';
+            if(isOil && r.nextDate) {
+                if(days<=2) statusClass = 'status-red';
+                else if(days<=7) statusClass = 'status-yellow';
+                else statusClass = 'status-green';
+            }
+            let canEdit = (r.recordedByPhone === currentUserPhone) || (r.recordedBy === currentUserName);
+            let editButton = canEdit ? `<button class="export-btn" style="background:#e2e8f0;" onclick="editRecord(${r.id},'${r.type}')">✏️ تعديل</button>` : '';
+            let deleteButton = canEdit ? `<button class="export-btn" style="background:#fee2e2; color:red;" onclick="moveToTrash(${r.id},'${r.type}')">🗑 حذف</button>` : '';
+            
+            let dieselValue = isOil ? (r.diesel ?? 0) : (r.diesel ?? 0);
+            let hoursValue = isOil ? (r.current ?? 0) : (r.hours ?? 0);
+            
+            // جلب الكود وعرضه في السجل
+            let siteCode = getSiteCodeFromName(r.site);
+            let codeDisplayHtml = siteCode ? `<div class="code-display" style="display:block; margin-top:5px; margin-bottom:5px;">📌 الكود: ${siteCode}</div>` : '';
+            
+            html += `<div class="record" style="border-right-color:${color}">
+                <span class="type-badge" style="background:${color}">${icon} ${isOil?'صيانة زيت':'زيارة مولد'}</span>
+                <div style="font-weight:800; font-size:18px; margin-bottom:12px;">📍 ${r.site}</div>
+                ${codeDisplayHtml}
+                <div class="big-numbers-row">
+                    <div class="number-card"><span>⏱️ العداد</span><div class="big-number">${hoursValue} H</div></div>
+                    <div class="number-card"><span>⛽ قياس الديزل</span><div class="big-number">${dieselValue} CM</div></div>
+                </div>
+                <div style="font-size:12px; color:#475569;">📅 ${r.date} | 👤 ${r.recordedBy || 'غير معروف'}</div>
+                ${isOil ? `<div style="margin-top:8px;">📅 التغيير القادم: ${r.nextDate || 'غير محدد'} • متبقٍ: ${days} يوم • متوسط التشغيل: ${r.avgDailyHours} س/يوم</div><div class="${statusClass}" style="margin-top:8px;">${statusClass==='status-red'?'حرج':(statusClass==='status-yellow'?'قريب':'ممتاز')}</div>` : ''}
+                ${!isOil && r.note ? `<div style="margin-top:8px;">📝 ${r.note}</div>` : ''}
+                ${alarmHtml}
+                <div style="display:flex; gap:8px; margin-top:15px; flex-wrap:wrap;">
+                    <button class="export-btn" onclick='copyRecordText(${JSON.stringify(r)},"${r.type}")'>📋 نسخ التقرير</button>
+                    <button class="export-btn" onclick='exportSingle(${JSON.stringify(r)},"${r.type}")'>📤 ملف</button>
+                    ${editButton}
+                    ${deleteButton}
+                </div>
+            </div>`;
+        }
+        document.getElementById("recordsList").innerHTML = html || "<div style='text-align:center; padding:40px;'>لا توجد بيانات</div>";
+    }
+    
+    function renderAlarms() {
+        let alarms = oils.filter(o => o.nextDate && isAlarmDue(o.nextDate));
+        let html = alarms.length ? alarms.map(o => `<div class="alarm-box"><div>🚨 ${o.site}</div><div>العداد: ${o.current} H</div><div>متوسط التشغيل: ${o.avgDailyHours} س/يوم</div><div>التغيير القادم: ${o.nextDate}</div><div>⏰ يتبقى ${daysRemaining(o.nextDate)} يوم</div></div>`).join('') : "<div style='text-align:center; padding:30px;'>✅ لا توجد مولدات في حالة طوارئ</div>";
+        document.getElementById("alarmList").innerHTML = html;
+    }
+    
+    function drawChart() {
+        let ctx = document.getElementById('chart').getContext('2d');
+        let sites = [...new Set(generators.map(g=>g.site))].slice(-5);
+        let hours = sites.map(s => { let last = generators.filter(g=>g.site===s).pop(); return last ? last.hours : 0; });
+        if(window.myChart) window.myChart.destroy();
+        window.myChart = new Chart(ctx, { type: 'bar', data: { labels: sites, datasets: [{ label: 'آخر قراءة للعداد (ساعة)', data: hours, backgroundColor: '#00c6ff', borderRadius: 10 }] }, options: { responsive: true } });
+    }
+    
+   function calculateDieselConsumption() {
+    let visitsBySite = new Map();
+    
+    // جمع الزيارات مع التأكد من وجود hours و diesel
+    generators.forEach(g => {
+        if (g.hours !== undefined && g.hours !== null && !isNaN(g.hours) &&
+            g.diesel !== undefined && g.diesel !== null && !isNaN(g.diesel)) {
+            if (!visitsBySite.has(g.site)) visitsBySite.set(g.site, []);
+            visitsBySite.get(g.site).push({ 
+                date: g.date, 
+                hours: Number(g.hours), 
+                diesel: Number(g.diesel),
+                recordId: g.id
+            });
+        }
+    });
+    
+    // ترتيب الزيارات لكل موقع حسب التاريخ
+    for (let visits of visitsBySite.values()) {
+        visits.sort((a,b) => new Date(a.date) - new Date(b.date));
+    }
+    
+    let rates = [];
+    for (let [site, visits] of visitsBySite.entries()) {
+        if (visits.length < 2) continue;
+        
+        // نأخذ آخر زيارتين (الأحدث)
+        let last = visits[visits.length - 1];
+        let prev = visits[visits.length - 2];
+        
+        let hoursDiff = last.hours - prev.hours;
+        let dieselDiff = prev.diesel - last.diesel;
+        
+        // التحقق من صحة القيم
+        if (isNaN(hoursDiff) || hoursDiff <= 0) {
+            console.warn(`ساعات غير صالحة للموقع ${site}: last.hours=${last.hours}, prev.hours=${prev.hours}`);
+            continue;
+        }
+        if (isNaN(dieselDiff) || dieselDiff <= 0) {
+            console.warn(`ديزل غير صالح للموقع ${site}: prev.diesel=${prev.diesel}, last.diesel=${last.diesel}`);
+            continue;
+        }
+        
+        rates.push({ 
+            site: site, 
+            rate: dieselDiff / hoursDiff, 
+            lastDate: last.date, 
+            prevDate: prev.date, 
+            hoursDiff: hoursDiff,
+            dieselUsed: dieselDiff,
+            prevDiesel: prev.diesel,
+            lastDiesel: last.diesel
+        });
+    }
+    
+    rates.sort((a,b) => b.rate - a.rate);
+    let container = document.getElementById("dieselConsumptionList");
+    if (!container) return;
+    
+    if (rates.length === 0) {
+        container.innerHTML = '<div class="muted" style="text-align:center;">🔍 لا توجد بيانات كافية (يلزم زيارتان صالحتان على الأقل لكل موقع)</div>';
+        return;
+    }
+    
+    let html = '<div style="display:flex;flex-direction:column;gap:12px;">';
+    rates.slice(0, 5).forEach((item, idx) => {
+        let barWidth = Math.min(100, (item.rate / rates[0].rate) * 100);
+        html += `<div style="background:#0f172a; border-radius:20px; padding:12px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <strong>#${idx+1} ${item.site}</strong>
+                <span style="background:#f59e0b; padding:4px 12px; border-radius:20px;">${item.rate.toFixed(2)} CM/ساعة</span>
+            </div>
+            <div style="background:#334155; border-radius:12px; height:12px; overflow:hidden;">
+                <div style="width:${barWidth}%; background:#ef4444; height:100%; border-radius:12px;"></div>
+            </div>
+            <div class="muted small" style="margin-top:8px;">
+                📊 استهلك ${item.dieselUsed.toFixed(1)} CM خلال ${item.hoursDiff} ساعة 
+                (${item.prevDate} → ${item.lastDate})<br>
+                🛢️ الديزل القديم: ${item.prevDiesel} CM → الجديد: ${item.lastDiesel} CM
+            </div>
+        </div>`;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+}
+    
+    function renderCountdown() {
+        if(!oils.length) { document.getElementById("countdownList").innerHTML = '<div class="muted">✨ لا توجد سجلات زيت بعد</div>'; return; }
+        let map = new Map();
+        oils.forEach(o => { if(!map.has(o.site) || new Date(o.date) > new Date(map.get(o.site).date)) map.set(o.site, o); });
+        let items = [];
+        for(let [site, oil] of map.entries()) {
+            let nextDate = oil.nextDate;
+            if(!nextDate && oil.avgDailyHours) nextDate = calcNextDate(oil.current, oil.avgDailyHours, new Date(oil.date));
+            if(!nextDate) continue;
+            let days = daysRemaining(nextDate);
+            if(days <= 7 && days >= 0) items.push({ site, days, nextDate });
+        }
+        items.sort((a,b)=> a.days - b.days);
+        if(items.length === 0) { document.getElementById("countdownList").innerHTML = '<div class="muted">✅ جميع المولدات بحالة جيدة</div>'; return; }
+        let html = '';
+        for(let it of items) {
+            let isCritical = it.days <= 2;
+            let cls = isCritical ? 'critical' : '';
+            html += `<div class="countdown-card ${cls}"><div><span class="countdown-icon">${isCritical ? '🚨' : '⚠️'}</span> 📍 ${it.site}</div><div class="countdown-days">${it.days} يوم</div><div class="small">التغيير: ${it.nextDate}</div></div>`;
+        }
+        document.getElementById("countdownList").innerHTML = html;
+    }
+    
+    function exportData() {
+        if(generators.length===0 && oils.length===0) { showToast("لا توجد بيانات", "error"); return; }
+        let txt = "📋 *تقرير آخر العمليات*\n━━━━━━━━━━━━━━━━━━━━━━\n\n";
+        generators.slice(-3).forEach(g=>{ 
+            let code = getSiteCodeFromName(g.site);
+            txt += `⚙️ زيارة مولد: ${g.site} ${code ? `(${code})` : ''} | ${g.date} | ساعات: ${g.hours} | ديزل: ${g.diesel??0} CM\n`;
+        });
+        oils.slice(-3).forEach(o=>{ 
+            let code = getSiteCodeFromName(o.site);
+            txt += `🛢️ زيت: ${o.site} ${code ? `(${code})` : ''} | ${o.date} | متبقٍ: ${daysRemaining(o.nextDate)} يوم\n`;
+        });
+        fallbackCopy(txt);
+        showToast("📋 تم نسخ التقرير");
+    }
+    
+    // ========== إصلاح دالة النسخة الاحتياطية لتعمل في APK ==========
+    function backupData() {
+        let data = { generators, oils, backupDate: new Date().toLocaleString() };
+        let blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
+        let a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `نظام_الغربي_Backup_${new Date().toLocaleDateString()}.json`;
+        a.click();
+        showToast("📥 تم تحميل نسخة احتياطية كاملة");
+    }
+    
+    // ========== دوال نافذة تغيير كلمة المرور (تعمل في APK) ==========
+    function openPasswordModal() {
+        document.getElementById("passwordModal").style.display = "flex";
+        document.getElementById("modalOldPass").value = "";
+        document.getElementById("modalNewPass").value = "";
+    }
+    
+    function closePasswordModal() {
+        document.getElementById("passwordModal").style.display = "none";
+    }
+    
+    async function confirmPasswordChange() {
+        let oldPass = document.getElementById("modalOldPass").value.trim();
+        let newPass = document.getElementById("modalNewPass").value.trim();
+        
+        if (!oldPass || !newPass) {
+            showToast("⚠️ الرجاء إدخال كلمة المرور الحالية والجديدة", "error");
+            return;
+        }
+        if (newPass.length < 4) {
+            showToast("⚠️ كلمة المرور الجديدة يجب أن تكون 4 أحرف على الأقل", "error");
+            return;
+        }
+        
+        if (!currentUserPhone) {
+            showToast("❌ لا يوجد مستخدم مسجل", "error");
+            closePasswordModal();
+            return;
+        }
+        if (!database) {
+            showToast("⚠️ لا يوجد اتصال بقاعدة البيانات", "error");
+            closePasswordModal();
+            return;
+        }
+        
+        try {
+            const snap = await database.ref(`users/${currentUserPhone}`).get();
+            let currentUserData = snap.exists() ? snap.val() : null;
+            if (!currentUserData || currentUserData.password !== oldPass) {
+                showToast("❌ كلمة المرور الحالية غير صحيحة", "error");
+                return;
+            }
+            
+            await database.ref(`users/${currentUserPhone}`).update({ password: newPass });
+            if (users[currentUserPhone]) users[currentUserPhone].password = newPass;
+            
+            showToast("✅ تم تغيير كلمة المرور بنجاح");
+            closePasswordModal();
+        } catch(e) {
+            console.error(e);
+            showToast("❌ فشل تغيير كلمة المرور", "error");
+        }
+    }
+    
+    // ========== دوال إضافة مستخدم جديد (للمهندس إبراهيم فقط) ==========
+    function openAddUserModal() {
+        document.getElementById("addUserModal").style.display = "flex";
+        document.getElementById("newUserPhone").value = "";
+        document.getElementById("newUserName").value = "";
+        document.getElementById("newUserPassword").value = "";
+    }
+    
+    function closeAddUserModal() {
+        document.getElementById("addUserModal").style.display = "none";
+    }
+    
+    async function confirmAddUser() {
+        let phone = document.getElementById("newUserPhone").value.trim();
+        let name = document.getElementById("newUserName").value.trim();
+        let pass = document.getElementById("newUserPassword").value.trim();
+        
+        if (!phone || !name) {
+            showToast("⚠️ الرجاء إدخال رقم الجوال والاسم", "error");
+            return;
+        }
+        if (!/^\d+$/.test(phone)) {
+            showToast("⚠️ رقم الجوال يجب أن يحتوي على أرقام فقط", "error");
+            return;
+        }
+        if (pass.length > 0 && pass.length < 4) {
+            showToast("⚠️ كلمة المرور يجب أن تكون 4 أحرف على الأقل", "error");
+            return;
+        }
+        
+        let finalPassword = pass || "123456";
+        
+        if (users[phone]) {
+            showToast("❌ هذا الرقم موجود مسبقاً", "error");
+            return;
+        }
+        
+        try {
+            if (database) {
+                await database.ref(`users/${phone}`).set({
+                    name: name,
+                    password: finalPassword
+                });
+                users[phone] = { name: name, password: finalPassword };
+                showToast(`✅ تمت إضافة المستخدم ${name} بنجاح`);
+                closeAddUserModal();
+            } else {
+                showToast("⚠️ لا يوجد اتصال بقاعدة البيانات", "error");
+            }
+        } catch(e) {
+            console.error(e);
+            showToast("❌ فشل إضافة المستخدم", "error");
+        }
+    }
+    
+    // ========== إظهار زر إضافة مستخدم فقط للمهندس إبراهيم ==========
+    function toggleAddUserButton() {
+        const addBtn = document.getElementById("addUserBtn");
+        if (!addBtn) return;
+        if (currentUserPhone === "738197187" || currentUserPhone === "738197197") {
+            addBtn.style.display = "block";
+        } else {
+            addBtn.style.display = "none";
+        }
+    }
+    
+    // ========== دوال المواقع الجديدة (من sites_data.js) ==========
+    function initSites() {
+        if (typeof getAllSiteNames === 'function') {
+            allSites = getAllSiteNames();
+        } else {
+            // Fallback في حال لم يتم تحميل الملف
+            allSites = [{name:"النخيله"},{name:"كيلو 16"},{name:"قطيع"},{name:"منصوريه"}];
+        }
+    }
+    
+    function displaySiteCode(siteInputId, codeDisplayId) {
+        let siteName = document.getElementById(siteInputId).value.trim();
+        let code = "";
+        if (typeof findSiteCode === 'function') {
+            code = findSiteCode(siteName);
+        }
+        let codeDiv = document.getElementById(codeDisplayId);
+        if (codeDiv && code) {
+            codeDiv.innerHTML = `📌 الكود: ${code}`;
+            codeDiv.style.display = "block";
+        } else if (codeDiv) {
+            codeDiv.style.display = "none";
+        }
+    }
+    
+    function searchSites(inputId, resId) {
+        let query = document.getElementById(inputId).value.trim().toUpperCase();
+        let div = document.getElementById(resId);
+        div.innerHTML = "";
+        if(query.length < 2) { div.style.display = "none"; return; }
+        let matches = allSites.filter(s => s.name.toUpperCase().includes(query)).slice(0,12);
+        if(matches.length) {
+            div.style.display = "block";
+            matches.forEach(site => {
+                let item = document.createElement("div");
+                item.className = "search-item";
+                item.innerText = site.name;
+                item.onclick = () => {
+                    document.getElementById(inputId).value = site.name;
+                    div.style.display = "none";
+                    if(inputId==='g_site') {
+                        toggleUnitField(inputId,'g_unit_container');
+                        displaySiteCode('g_site','g_code_display');
+                    }
+                    if(inputId==='o_site') {
+                        toggleUnitField(inputId,'o_unit_container');
+                        displaySiteCode('o_site','o_code_display');
+                    }
+                };
+                div.appendChild(item);
+            });
+        } else div.style.display = "none";
+    }
+    
+    function go(page, el) {
+        document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+        document.getElementById(page).classList.add("active");
+        if(el) { document.querySelectorAll(".nav-item").forEach(i=>i.classList.remove("active")); el.classList.add("active"); }
+        if(page==="records") renderRecords();
+        if(page==="stats") { drawChart(); calculateDieselConsumption(); }
+        if(page==="alarm") renderAlarms();
+        if(page==="home") renderCountdown();
+        window.scrollTo(0,0);
+    }
+    
+    function setTab(tab, el) {
+        currentTab = tab;
+        document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+        el.classList.add("active");
+        renderRecords();
+    }
+    
+    function showToast(msg, type="success") {
+        let t = document.getElementById("toast");
+        t.innerText = msg;
+        t.style.background = type==="success" ? "var(--success)" : "var(--danger)";
+        t.style.top = "30px";
+        setTimeout(()=> t.style.top = "-100px", 3000);
+    }
+    
+    function toggleSidebar() {
+        let s = document.getElementById("sidebar"), o = document.getElementById("overlay");
+        if(s.classList.contains("open")) { s.classList.remove("open"); o.style.display = "none"; }
+        else { s.classList.add("open"); o.style.display = "block"; }
+    }
+    
+    document.addEventListener("click", function(e) {
+        if(!e.target.closest('.search-results-container')) {
+            document.querySelectorAll('.search-dropdown').forEach(d => d.style.display = "none");
+        }
+    });
+    
+    function syncData() {
+        if(!database) { renderRecords(); return; }
+        database.ref('generators').on('value', snap => { generators = snap.val() ? Object.values(snap.val()) : []; renderRecords(); renderCountdown(); });
+        database.ref('oils').on('value', snap => { oils = snap.val() ? Object.values(snap.val()) : []; renderRecords(); renderCountdown(); renderAlarms(); });
+        database.ref('trash').on('value', snap => { trashItems = snap.val() ? Object.values(snap.val()) : []; renderRecords(); });
+        database.ref('users').on('value', snap => { if(snap.exists()) users = snap.val(); });
+    }
+    
+    function startReminder() {
+        if(reminderInterval) clearInterval(reminderInterval);
+        reminderInterval = setInterval(() => {
+            let alarms = oils.filter(o => o.nextDate && daysRemaining(o.nextDate) >=0 && daysRemaining(o.nextDate) <=2);
+            if(alarms.length && Notification.permission === "granted") {
+                new Notification("تذكير صيانة", { body: `يوجد ${alarms.length} مولد بحاجة لتغيير الزيت خلال يومين` });
+            }
+        }, 3*60*60*1000);
+    }
+    
+    async function loginSystem() {
+        let phone = document.getElementById("loginPhone").value.trim();
+        let pass = document.getElementById("loginPass").value.trim();
+        
+        if (database) {
+            try {
+                const snap = await database.ref('users').get();
+                if (snap.exists()) users = snap.val();
+                else await database.ref('users').set(users);
+            } catch(e) { console.warn(e); }
+        }
+        
+        if (users[phone] && users[phone].password === pass) {
+            currentUserPhone = phone;
+            currentUserName = users[phone].name;
+            localStorage.setItem("loggedUser", currentUserName);
+            localStorage.setItem("loggedUserPhone", phone);
+            document.getElementById("loginScreen").style.display = "none";
+            document.getElementById("sidebarName").innerText = currentUserName;
+            document.getElementById("sidebarPhone").innerText = phone;
+            if (currentUserPhone === "733111272") {
+    document.getElementById("welcomeUser").innerHTML = `👨‍🔧 نورتنا يامدير ابوبكر منصور الحكيمي`;
+} else {
+    document.getElementById("welcomeUser").innerHTML = `👨‍🔧 أهلًا وسهلًا نورتنا يا مهندس ${currentUserName}`;
+}
+            if (Notification.permission !== "granted") Notification.requestPermission();
+            initSites();
+            loadFromStorage();
+            syncData();
+            startReminder();
+            toggleAddUserButton();
+        } else {
+            document.getElementById("loginError").style.display = "block";
+        }
+    }
+    
+    function logoutSystem() {
+        saveToLocal();
+        if(database) pushToFirebase();
+        if(reminderInterval) clearInterval(reminderInterval);
+        localStorage.removeItem("loggedUser");
+        localStorage.removeItem("loggedUserPhone");
+        document.getElementById("loginScreen").style.display = "flex";
+        toggleSidebar();
+        showToast("تم تسجيل الخروج");
+        currentUserPhone = "";
+        currentUserName = "";
+    }
+    
+    let saveSound = new Audio("https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3");
+    let deleteSound = new Audio("https://www.soundjay.com/misc/sounds/cartoon-boop-2.mp3");
+    let alarmSound = new Audio("https://www.soundjay.com/misc/sounds/air-horn-03.mp3");
+    function playSave(){ saveSound.currentTime=0; saveSound.play().catch(()=>{}); }
+    function playDelete(){ deleteSound.currentTime=0; deleteSound.play().catch(()=>{}); }
+    function playAlarm(){ alarmSound.currentTime=0; alarmSound.play().catch(()=>{}); }
+    
+    window.onload = function() {
+        let savedName = localStorage.getItem("loggedUser");
+        let savedPhone = localStorage.getItem("loggedUserPhone");
+        if(savedName && savedPhone && users[savedPhone] && users[savedPhone].name === savedName) {
+            currentUserPhone = savedPhone;
+            currentUserName = savedName;
+            document.getElementById("loginScreen").style.display = "none";
+            document.getElementById("sidebarName").innerText = savedName;
+            document.getElementById("sidebarPhone").innerText = savedPhone;
+            if (savedPhone === "733111272") {
+    document.getElementById("welcomeUser").innerHTML = `👨‍🔧 نورتنا يامدير ابوبكر منصور الحكيمي`;
+} else {
+    document.getElementById("welcomeUser").innerHTML = `👨‍🔧 أهلًا وسهلًا نورتنا يا مهندس ${savedName}`;
+}
+            initSites();
+            loadFromStorage();
+            syncData();
+            startReminder();
+            toggleAddUserButton();
+        } else {
+            document.getElementById("loginScreen").style.display = "flex";
+        }
+    };
+    setInterval(()=>{ if(generators.length||oils.length||trashItems.length) saveToLocal(); }, 10000);
+</script>
+<script>
+// ========== إخفاء قائمة "رقم المولد" بالكامل ==========
+(function() {
+    // إخفاء قائمة رقم المولد في صفحة الزيارة وصيانة الزيت نهائياً
+    let genUnit = document.getElementById("g_unit_container");
+    let oilUnit = document.getElementById("o_unit_container");
+    if (genUnit) genUnit.style.display = "none";
+    if (oilUnit) oilUnit.style.display = "none";
+    
+    const TARGET_SITE = "بالمس فلج (النخيله)";
+    
+    function fixGeneratorPage() {
+        let siteInput = document.getElementById("g_site");
+        if (!siteInput) return;
+        let isDual = (siteInput.value.trim() === TARGET_SITE);
+        
+        // الحقول العادية (تظهر لجميع المواقع، ولكن للموقع المزدوج سيتم إخفاؤها)
+        let oldHours = document.getElementById("g_hours");
+        let oldDiesel = document.getElementById("g_diesel");
+        let oldNote = document.getElementById("g_note");
+        if (oldHours) oldHours.style.display = isDual ? "none" : "block";
+        if (oldDiesel) oldDiesel.style.display = isDual ? "none" : "block";
+        if (oldNote) oldNote.style.display = isDual ? "none" : "block";
+        
+        // إنشاء حقول المولدين إذا لم تكن موجودة
+        if (isDual && !document.getElementById("g_dual_panel")) {
+            let card = document.querySelector("#generator .card");
+            if (!card) return;
+            let saveBtn = card.querySelector(".btn-save");
+            let panel = document.createElement("div");
+            panel.id = "g_dual_panel";
+            panel.style.marginTop = "15px";
+            panel.innerHTML = `
+                <div style="background:#0f172a; border-radius:20px; padding:15px; margin-bottom:15px; border:1px solid #f59e0b;">
+                    <div style="font-weight:800; color:#f59e0b;">🔹 المولد الأول</div>
+                    <input type="number" id="g_h1" placeholder="عداد الساعات - مولد 1" style="margin:8px 0; width:100%;">
+                    <input type="number" id="g_d1" placeholder="ديزل (CM) - مولد 1" style="margin:8px 0; width:100%;">
+                    <textarea id="g_n1" rows="2" placeholder="ملاحظات - مولد 1" style="width:100%;"></textarea>
+                </div>
+                <div style="background:#0f172a; border-radius:20px; padding:15px; margin-bottom:15px; border:1px solid #f59e0b;">
+                    <div style="font-weight:800; color:#f59e0b;">🔸 المولد الثاني</div>
+                    <input type="number" id="g_h2" placeholder="عداد الساعات - مولد 2" style="margin:8px 0; width:100%;">
+                    <input type="number" id="g_d2" placeholder="ديزل (CM) - مولد 2" style="margin:8px 0; width:100%;">
+                    <textarea id="g_n2" rows="2" placeholder="ملاحظات - مولد 2" style="width:100%;"></textarea>
+                </div>
+            `;
+            card.insertBefore(panel, saveBtn);
+        }
+        let panel = document.getElementById("g_dual_panel");
+        if (panel) panel.style.display = isDual ? "block" : "none";
+    }
+    
+    function fixOilPage() {
+        let siteInput = document.getElementById("o_site");
+        if (!siteInput) return;
+        let isDual = (siteInput.value.trim() === TARGET_SITE);
+        
+        let oldCurr = document.getElementById("o_current");
+        let oldDiesel = document.getElementById("o_diesel");
+        let oldAvg = document.getElementById("o_avgDaily");
+        let oldNote = document.getElementById("o_note");
+        let oldFilters = document.querySelector("#oil .card > div:last-child");
+        if (oldCurr) oldCurr.style.display = isDual ? "none" : "block";
+        if (oldDiesel) oldDiesel.style.display = isDual ? "none" : "block";
+        if (oldAvg) oldAvg.style.display = isDual ? "none" : "block";
+        if (oldNote) oldNote.style.display = isDual ? "none" : "block";
+        if (oldFilters) oldFilters.style.display = isDual ? "none" : "block";
+        
+        if (isDual && !document.getElementById("o_dual_panel")) {
+            let card = document.querySelector("#oil .card");
+            if (!card) return;
+            let saveBtn = card.querySelector(".btn-save");
+            let panel = document.createElement("div");
+            panel.id = "o_dual_panel";
+            panel.innerHTML = `
+                <div style="background:#0f172a; border-radius:20px; padding:15px; margin-bottom:15px; border:1px solid #f59e0b;">
+                    <div style="font-weight:800; color:#f59e0b;">🔹 المولد الأول</div>
+                    <input type="number" id="o_c1" placeholder="العداد الحالي - مولد 1" style="margin:8px 0; width:100%;">
+                    <input type="number" id="o_dz1" placeholder="ديزل (CM) - مولد 1" style="margin:8px 0; width:100%;">
+                    <input type="number" id="o_avg1" placeholder="متوسط التشغيل - مولد 1" step="0.5" style="margin:8px 0; width:100%;">
+                    <textarea id="o_n1" rows="2" placeholder="ملاحظات - مولد 1" style="width:100%;"></textarea>
+                    <div style="margin-top:10px;"><label>الفلاتر:</label> 
+                        <label><input type="checkbox" id="f_oil1"> زيت</label>
+                        <label><input type="checkbox" id="f_diesel1"> ديزل</label>
+                        <label><input type="checkbox" id="f_air1"> هواء</label>
+                    </div>
+                </div>
+                <div style="background:#0f172a; border-radius:20px; padding:15px; margin-bottom:15px; border:1px solid #f59e0b;">
+                    <div style="font-weight:800; color:#f59e0b;">🔸 المولد الثاني</div>
+                    <input type="number" id="o_c2" placeholder="العداد الحالي - مولد 2" style="margin:8px 0; width:100%;">
+                    <input type="number" id="o_dz2" placeholder="ديزل (CM) - مولد 2" style="margin:8px 0; width:100%;">
+                    <input type="number" id="o_avg2" placeholder="متوسط التشغيل - مولد 2" step="0.5" style="margin:8px 0; width:100%;">
+                    <textarea id="o_n2" rows="2" placeholder="ملاحظات - مولد 2" style="width:100%;"></textarea>
+                    <div style="margin-top:10px;"><label>الفلاتر:</label>
+                        <label><input type="checkbox" id="f_oil2"> زيت</label>
+                        <label><input type="checkbox" id="f_diesel2"> ديزل</label>
+                        <label><input type="checkbox" id="f_air2"> هواء</label>
+                    </div>
+                </div>
+            `;
+            card.insertBefore(panel, saveBtn);
+        }
+        let panel = document.getElementById("o_dual_panel");
+        if (panel) panel.style.display = isDual ? "block" : "none";
+    }
+    
+    // استبدال دوال الحفظ
+    let originalSaveGen = window.saveGenerator;
+    if (originalSaveGen) {
+        window.saveGenerator = function() {
+            let site = document.getElementById("g_site").value.trim();
+            let isDual = (site === TARGET_SITE);
+            if (!isDual) {
+                originalSaveGen();
+                return;
+            }
+            let date = document.getElementById("g_date").value || new Date().toISOString().split('T')[0];
+            let userName = localStorage.getItem("loggedUser") || "مستخدم";
+            let userPhone = localStorage.getItem("loggedUserPhone") || "";
+            let h1 = parseFloat(document.getElementById("g_h1")?.value);
+            let d1 = parseFloat(document.getElementById("g_d1")?.value);
+            let n1 = document.getElementById("g_n1")?.value || "";
+            let h2 = parseFloat(document.getElementById("g_h2")?.value);
+            let d2 = parseFloat(document.getElementById("g_d2")?.value);
+            let n2 = document.getElementById("g_n2")?.value || "";
+            let saved = 0;
+            if (!isNaN(h1)) {
+                generators.push({ id: generateId(), recordedBy: userName, recordedByPhone: userPhone, date: date, site: `${site} - مولد 1`, hours: h1, diesel: isNaN(d1)?0:d1, note: n1 });
+                saved++;
+            }
+            if (!isNaN(h2)) {
+                generators.push({ id: generateId(), recordedBy: userName, recordedByPhone: userPhone, date: date, site: `${site} - مولد 2`, hours: h2, diesel: isNaN(d2)?0:d2, note: n2 });
+                saved++;
+            }
+            if (saved === 0) { showToast("⚠️ أدخل بيانات مولد واحد على الأقل", "error"); return; }
+            pushToFirebase();
+            playSave();
+            showToast("✅ تم حفظ زيارة المولدين");
+            document.getElementById("g_h1").value = "";
+            document.getElementById("g_d1").value = "";
+            document.getElementById("g_n1").value = "";
+            document.getElementById("g_h2").value = "";
+            document.getElementById("g_d2").value = "";
+            document.getElementById("g_n2").value = "";
+            resetGeneratorForm();
+            go('records');
+        };
+    }
+    
+    let originalSaveOil = window.saveOil;
+    if (originalSaveOil) {
+        window.saveOil = function() {
+            let site = document.getElementById("o_site").value.trim();
+            let isDual = (site === TARGET_SITE);
+            if (!isDual) {
+                originalSaveOil();
+                return;
+            }
+            let recordDate = document.getElementById("o_date").value ? new Date(document.getElementById("o_date").value) : new Date();
+            let dateStr = recordDate.toISOString().split('T')[0];
+            let userName = localStorage.getItem("loggedUser") || "مستخدم";
+            let userPhone = localStorage.getItem("loggedUserPhone") || "";
+            function calcNext(cur, avg, rec) {
+                if (!avg || avg <= 0) return null;
+                let days = Math.ceil(300 / avg);
+                let target = new Date(rec);
+                target.setDate(target.getDate() + days);
+                return target.toISOString().split('T')[0];
+            }
+            let c1 = parseFloat(document.getElementById("o_c1")?.value);
+            let dz1 = parseFloat(document.getElementById("o_dz1")?.value);
+            let avg1 = document.getElementById("o_avg1")?.value;
+            let avgNum1 = avg1 ? parseFloat(avg1) : 16;
+            let n1 = document.getElementById("o_n1")?.value || "";
+            let f1 = { oil: document.getElementById("f_oil1")?.checked || false, diesel: document.getElementById("f_diesel1")?.checked || false, air: document.getElementById("f_air1")?.checked || false };
+            let c2 = parseFloat(document.getElementById("o_c2")?.value);
+            let dz2 = parseFloat(document.getElementById("o_dz2")?.value);
+            let avg2 = document.getElementById("o_avg2")?.value;
+            let avgNum2 = avg2 ? parseFloat(avg2) : 16;
+            let n2 = document.getElementById("o_n2")?.value || "";
+            let f2 = { oil: document.getElementById("f_oil2")?.checked || false, diesel: document.getElementById("f_diesel2")?.checked || false, air: document.getElementById("f_air2")?.checked || false };
+            let saved = 0;
+            if (!isNaN(c1)) {
+                let nxt1 = calcNext(c1, avgNum1, recordDate);
+                oils.push({ id: generateId(), recordedBy: userName, recordedByPhone: userPhone, date: dateStr, site: `${site} - مولد 1`, current: c1, diesel: isNaN(dz1)?0:dz1, avgDailyHours: avgNum1, nextDate: nxt1, note: n1, filters: f1 });
+                saved++;
+            }
+            if (!isNaN(c2)) {
+                let nxt2 = calcNext(c2, avgNum2, recordDate);
+                oils.push({ id: generateId(), recordedBy: userName, recordedByPhone: userPhone, date: dateStr, site: `${site} - مولد 2`, current: c2, diesel: isNaN(dz2)?0:dz2, avgDailyHours: avgNum2, nextDate: nxt2, note: n2, filters: f2 });
+                saved++;
+            }
+            if (saved === 0) { showToast("⚠️ أدخل بيانات مولد واحد على الأقل", "error"); return; }
+            pushToFirebase();
+            playSave();
+            showToast("✅ تم حفظ صيانة المولدين");
+            document.getElementById("o_c1").value = "";
+            document.getElementById("o_dz1").value = "";
+            document.getElementById("o_avg1").value = "";
+            document.getElementById("o_n1").value = "";
+            document.getElementById("f_oil1").checked = false;
+            document.getElementById("f_diesel1").checked = false;
+            document.getElementById("f_air1").checked = false;
+            document.getElementById("o_c2").value = "";
+            document.getElementById("o_dz2").value = "";
+            document.getElementById("o_avg2").value = "";
+            document.getElementById("o_n2").value = "";
+            document.getElementById("f_oil2").checked = false;
+            document.getElementById("f_diesel2").checked = false;
+            document.getElementById("f_air2").checked = false;
+            resetOilForm();
+            go('records');
+        };
+    }
+    
+    function init() {
+        let gSite = document.getElementById("g_site");
+        if (gSite) {
+            gSite.addEventListener("change", fixGeneratorPage);
+            gSite.addEventListener("input", () => setTimeout(fixGeneratorPage, 200));
+            fixGeneratorPage();
+        }
+        let oSite = document.getElementById("o_site");
+        if (oSite) {
+            oSite.addEventListener("change", fixOilPage);
+            oSite.addEventListener("input", () => setTimeout(fixOilPage, 200));
+            fixOilPage();
+        }
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+    else init();
+})();
+</script>
+<script>
+// ========== إضافة خانة ملاحظات المهندس في صيانة الزيت (لجميع المواقع) ==========
+(function() {
+    function addNoteFieldToOil() {
+        // التأكد من أن الحقل غير موجود مسبقاً
+        if (document.getElementById("o_note")) return;
+        
+        // البحث عن حقل متوسط التشغيل اليومي
+        let avgField = document.getElementById("o_avgDaily");
+        if (!avgField) return;
+        
+        // إنشاء حقل الملاحظات
+        let noteField = document.createElement("textarea");
+        noteField.id = "o_note";
+        noteField.rows = 2;
+        noteField.placeholder = "ملاحظات المهندس (اختياري)";
+        noteField.style.width = "100%";
+        noteField.style.marginBottom = "15px";
+        noteField.style.padding = "18px";
+        noteField.style.borderRadius = "25px";
+        noteField.style.border = "1px solid rgba(255,255,255,0.1)";
+        noteField.style.background = "#0f172a";
+        noteField.style.color = "white";
+        noteField.style.fontSize = "16px";
+        
+        // إضافة الحقل بعد حقل متوسط التشغيل
+        avgField.insertAdjacentElement("afterend", noteField);
+    }
+    
+    // تنفيذ عند تحميل الصفحة، وأيضاً عند فتح صفحة الزيت (لأن الصفحة قد تظهر لاحقاً)
+    function init() {
+        addNoteFieldToOil();
+        // مراقبة إذا تم فتح صفحة الزيت (لأن DOM قد لا يكون جاهزاً بالكامل)
+        let observer = new MutationObserver(function() {
+            if (document.getElementById("oil") && document.getElementById("oil").classList.contains("active")) {
+                addNoteFieldToOil();
+            }
+        });
+        observer.observe(document.body, { attributes: true, subtree: false, attributeFilter: ["class"] });
+    }
+    
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", init);
+    } else {
+        init();
+    }
+})();
+</script>
+<script>
+// ========== عرض حالة الزيت في صفحة الصيانة (تحت عداد المولد) ==========
+(function() {
+    // دالة تقوم بإنشاء وعرض حالة الزيت
+    function displayOilStatus() {
+        // 1. نبحث عن العناصر
+        let oilPage = document.getElementById("oil");
+        if (!oilPage || !oilPage.classList.contains("active")) return;
+        
+        let siteInput = document.getElementById("o_site");
+        let currentInput = document.getElementById("o_current");
+        if (!siteInput || !currentInput) return;
+        
+        let site = siteInput.value.trim();
+        let currentHours = parseFloat(currentInput.value);
+        
+        // 2. نبحث أو ننشئ div الحالة
+        let statusDiv = document.getElementById("dynamicOilStatus");
+        if (!statusDiv) {
+            statusDiv = document.createElement("div");
+            statusDiv.id = "dynamicOilStatus";
+            statusDiv.style.cssText = "background:#1e293b; border-radius:20px; padding:15px; margin:10px 0; display:none;";
+            // نضعه بعد حقل العداد مباشرة
+            currentInput.insertAdjacentElement("afterend", statusDiv);
+        }
+        
+        // 3. إذا لم توجد بيانات كافية نخفي
+        if (!site || isNaN(currentHours)) {
+            statusDiv.style.display = "none";
+            return;
+        }
+        
+        // 4. البحث في مصفوفة oils (متاحة عامة)
+        if (typeof oils === 'undefined' || !oils.length) {
+            statusDiv.innerHTML = `<div style="font-weight:800;">🛢️ حالة الزيت</div><div>⚠️ لا توجد بيانات زيت محملة بعد</div>`;
+            statusDiv.style.display = "block";
+            return;
+        }
+        
+        // تصفية السجلات للموقع المطلوب (مع دعم المولدين)
+        let siteOils = oils.filter(o => o.site === site || o.site.startsWith(site + " - مولد"));
+        if (siteOils.length === 0) {
+            statusDiv.innerHTML = `<div style="font-weight:800;">🛢️ حالة الزيت لموقع: ${site}</div>
+                                   <div>❌ لا يوجد سجل تغيير زيت سابق لهذا الموقع</div>`;
+            statusDiv.style.display = "block";
+            return;
+        }
+        
+        // نأخذ أحدث سجل
+        siteOils.sort((a,b) => new Date(b.date) - new Date(a.date));
+        let last = siteOils[0];
+        let lastHours = last.current;
+        let consumed = currentHours - lastHours;
+        let remaining = 300 - consumed;
+        
+        let html = `<div style="font-weight:800;">🛢️ حالة الزيت لموقع: ${site}</div>`;
+        html += `<div>📅 آخر تغيير: ${last.date} (العداد: ${lastHours})</div>`;
+        html += `<div>⏱️ منذ التغيير: ${consumed} ساعة</div>`;
+        html += `<div>⏳ المتبقي: ${remaining > 0 ? remaining + ' ساعة' : '⚠️ تجاوز ' + Math.abs(remaining) + ' ساعة'}</div>`;
+        statusDiv.innerHTML = html;
+        statusDiv.style.display = "block";
+    }
+    
+    // ربط الأحداث: تغيير الموقع أو إدخال العداد
+    function bindEvents() {
+        let siteInput = document.getElementById("o_site");
+        let currentInput = document.getElementById("o_current");
+        if (siteInput) {
+            siteInput.onchange = displayOilStatus;
+            siteInput.oninput = function() { setTimeout(displayOilStatus, 200); };
+        }
+        if (currentInput) {
+            currentInput.oninput = displayOilStatus;
+        }
+    }
+    
+    // مراقب لفتح صفحة الزيت
+    let observer = new MutationObserver(function() {
+        let oilPage = document.getElementById("oil");
+        if (oilPage && oilPage.classList.contains("active")) {
+            bindEvents();
+            displayOilStatus();
+        }
+    });
+    observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    
+    // تنفيذ أولي بعد تحميل DOM
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", function() {
+            bindEvents();
+            displayOilStatus();
+        });
+    } else {
+        bindEvents();
+        displayOilStatus();
+    }
+    
+    // محاولة تحديث الحالة كل ثانية (لحين توفر بيانات oils)
+    setInterval(function() {
+        if (document.getElementById("oil") && document.getElementById("oil").classList.contains("active")) {
+            displayOilStatus();
+        }
+    }, 1000);
+})();
+</script>
+<script>
+// تحديث شامل: إضافة الملاحظة لسجلات الزيت وعرضها في السجلات
+(function() {
+    // 1. التأكد من وجود حقل الملاحظات في صفحة الزيت
+    function ensureNoteField() {
+        if (document.getElementById("o_note")) return;
+        let avgField = document.getElementById("o_avgDaily");
+        if (!avgField) return;
+        let noteField = document.createElement("textarea");
+        noteField.id = "o_note";
+        noteField.rows = 2;
+        noteField.placeholder = "📝 ملاحظات المهندس (اختياري)";
+        noteField.style.cssText = "width:100%; padding:18px; border-radius:25px; border:1px solid rgba(255,255,255,0.1); background:#0f172a; color:white; font-size:16px; margin-bottom:15px;";
+        avgField.insertAdjacentElement("afterend", noteField);
+    }
+    
+    // 2. تعديل دالة saveOil لتشمل الملاحظة (إذا كانت موجودة)
+    let originalSaveOil = window.saveOil;
+    if (originalSaveOil) {
+        window.saveOil = function() {
+            let site = document.getElementById("o_site").value.trim();
+            if(!site) { showToast("⚠️ أدخل الموقع", "error"); return; }
+            let unit = document.getElementById("o_unit").value;
+            let fullSite = getFullSiteName(site, unit);
+            let current = parseFloat(document.getElementById("o_current").value);
+            let diesel = parseFloat(document.getElementById("o_diesel").value);
+            let avg = parseFloat(document.getElementById("o_avgDaily").value);
+            let note = document.getElementById("o_note")?.value || "";
+            if(isNaN(current) || isNaN(avg) || avg<=0) { showToast("⚠️ أكمل البيانات", "error"); return; }
+            let recordDate = document.getElementById("o_date").value ? new Date(document.getElementById("o_date").value) : new Date();
+            let nextDate = calcNextDate(current, avg, recordDate);
+            let data = {
+                id: generateId(),
+                recordedBy: currentUserName,
+                recordedByPhone: currentUserPhone,
+                date: recordDate.toISOString().split('T')[0],
+                site: fullSite,
+                current: current,
+                diesel: isNaN(diesel) ? 0 : diesel,
+                avgDailyHours: avg,
+                nextDate: nextDate,
+                note: note,
+                filters: {
+                    oil: document.getElementById("f_oil").checked,
+                    diesel: document.getElementById("f_diesel").checked,
+                    air: document.getElementById("f_air").checked
+                }
+            };
+            if(editIndex > -1 && editType === 'oil') {
+                if(oils[editIndex].recordedByPhone !== currentUserPhone && oils[editIndex].recordedBy !== currentUserName) {
+                    showToast("❌ لا يمكنك تعديل سجل ليس لك", "error"); return;
+                }
+                data.id = oils[editIndex].id;
+                oils[editIndex] = data;
+                editIndex = -1; editType = "";
+            } else oils.push(data);
+            pushToFirebase();
+            if(isAlarmDue(nextDate)) { playAlarm(); showToast(`🚨 إنذار: ${fullSite} يتبقى يومان`, "error"); }
+            else playSave();
+            showToast("✅ سجلت الصيانة");
+            resetOilForm();
+            go('records');
+        };
+    }
+    
+    // 3. تعديل دالة renderRecords لإظهار الملاحظة في سجلات الزيت
+    let originalRender = window.renderRecords;
+    if (originalRender) {
+        window.renderRecords = function() {
+            // استدعاء النسخة الأصلية أولاً لتوليد HTML الأساسي
+            originalRender();
+            // ثم نضيف الملاحظات إذا وجدت (بعد أن يتم رسم العناصر)
+            setTimeout(() => {
+                let recordsDiv = document.getElementById("recordsList");
+                if (!recordsDiv) return;
+                let oilRecords = recordsDiv.querySelectorAll('.record');
+                for (let recDiv of oilRecords) {
+                    let badge = recDiv.querySelector('.type-badge');
+                    if (badge && badge.innerText.includes('صيانة زيت')) {
+                        // نبحث عن id السجل مخزن في مكان ما؟ الأسهل: نبحث عن نص الموقع ثم نطابق مع مصفوفة oils
+                        let siteNameElem = recDiv.querySelector('div[style*="font-weight:800"]');
+                        if (!siteNameElem) continue;
+                        let siteText = siteNameElem.innerText.replace('📍', '').trim();
+                        let oilRecord = oils.find(o => o.site === siteText && o.note);
+                        if (oilRecord && oilRecord.note && !recDiv.querySelector('.note-display-added')) {
+                            let noteDiv = document.createElement('div');
+                            noteDiv.className = 'note-display-added';
+                            noteDiv.style.cssText = 'margin-top:8px; background:rgba(0,198,255,0.1); padding:8px 12px; border-radius:15px; font-size:14px;';
+                            noteDiv.innerHTML = `📝 ${oilRecord.note}`;
+                            // إدراج قبل أزرار التصدير
+                            let buttonsDiv = recDiv.querySelector('div[style*="display:flex; gap:8px"]');
+                            if (buttonsDiv) buttonsDiv.insertAdjacentElement('beforebegin', noteDiv);
+                            else recDiv.appendChild(noteDiv);
+                        }
+                    }
+                }
+            }, 50);
+        };
+    }
+    
+    // مراقب لفتح صفحة الزيت للتأكد من وجود حقل الملاحظات
+    let observer = new MutationObserver(() => {
+        if (document.getElementById("oil")?.classList.contains("active")) ensureNoteField();
+    });
+    observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    ensureNoteField();
+})();
+</script>
+<script>
+// ========== ميزة الطوارئ التلقائية عند تجاوز 300 ساعة من آخر تغيير زيت ==========
+(function() {
+    // دالة للتحقق من تجاوز الزيت لمولد معين (بناءً على آخر زيارة مسجلة وآخر تغيير زيت)
+    function isOilOverdue(siteName, currentHours) {
+        // البحث عن آخر تغيير زيت لهذا الموقع (يدعم المولدين)
+        let oilRecords = oils.filter(o => o.site === siteName);
+        if (oilRecords.length === 0) return false;
+        oilRecords.sort((a,b) => new Date(b.date) - new Date(a.date));
+        let lastOil = oilRecords[0];
+        let hoursSince = currentHours - lastOil.current;
+        return hoursSince > 300;
+    }
+    
+    // دالة لتحديث قائمة الطوارئ بناءً على جميع المولدات المخالفة
+    function updateAlarmListWithOverdue() {
+        let alarmDiv = document.getElementById("alarmList");
+        if (!alarmDiv) return;
+        
+        let overdueGenerators = [];
+        // نأخذ آخر زيارة لكل موقع مولد
+        let latestGenMap = new Map();
+        generators.forEach(g => {
+            let site = g.site;
+            if (!latestGenMap.has(site) || new Date(g.date) > new Date(latestGenMap.get(site).date)) {
+                latestGenMap.set(site, g);
+            }
+        });
+        
+        for (let [site, gen] of latestGenMap.entries()) {
+            if (isOilOverdue(site, gen.hours)) {
+                overdueGenerators.push({ site: site, hours: gen.hours, date: gen.date });
+            }
+        }
+        
+        if (overdueGenerators.length === 0) {
+            // إذا لم يوجد مخالف، نعرض رسالة عادية أو نترك الطوارئ كما هي (ربما تعرض المولدات المستحقة خلال يومين كما كان)
+            // لكننا سنحتفظ بالمنطق القديم أيضًا (الذي يعتمد على nextDate)
+            // لذا سندمج: نعرض المخالفين + المستحقين خلال يومين
+            let upcomingAlarms = oils.filter(o => o.nextDate && daysRemaining(o.nextDate) >=0 && daysRemaining(o.nextDate) <=2);
+            if (upcomingAlarms.length === 0) {
+                alarmDiv.innerHTML = "<div style='text-align:center; padding:30px;'>✅ لا توجد مولدات في حالة طوارئ</div>";
+            } else {
+                let html = "";
+                upcomingAlarms.forEach(o => {
+                    html += `<div class="alarm-box"><div>🚨 ${o.site}</div><div>العداد: ${o.current} H</div><div>التغيير القادم: ${o.nextDate}</div><div>⏰ يتبقى ${daysRemaining(o.nextDate)} يوم</div></div>`;
+                });
+                alarmDiv.innerHTML = html;
+            }
+            return;
+        }
+        
+        let html = "<div style='margin-bottom:10px;' class='card-title'>⚠️ مولدات تجاوزت 300 ساعة من آخر تغيير زيت</div>";
+        overdueGenerators.forEach(g => {
+            html += `<div class="alarm-box" style="background:rgba(239,68,68,0.3);">
+                        <div>🚨 ${g.site}</div>
+                        <div>العداد الحالي: ${g.hours} H</div>
+                        <div>تاريخ الزيارة: ${g.date}</div>
+                        <div style="color:#f97316;">⚠️ يلزم تغيير الزيت فوراً!</div>
+                     </div>`;
+        });
+        // نضيف أيضًا المستحقين خلال يومين من صيانة الزيت
+        let upcomingAlarms = oils.filter(o => o.nextDate && daysRemaining(o.nextDate) >=0 && daysRemaining(o.nextDate) <=2);
+        if (upcomingAlarms.length) {
+            html += "<div class='card-title' style='margin-top:15px;'>⏰ مولدات مستحقة خلال يومين</div>";
+            upcomingAlarms.forEach(o => {
+                html += `<div class="alarm-box"><div>⚠️ ${o.site}</div><div>التغيير القادم: ${o.nextDate}</div><div>⏰ يتبقى ${daysRemaining(o.nextDate)} يوم</div></div>`;
+            });
+        }
+        alarmDiv.innerHTML = html;
+    }
+    
+    // تعديل دالة updateOilStatus (التي تظهر في صفحة زيارة المولد) لتظهر تحذيرًا عند التجاوز
+    let originalUpdateOilStatus = window.updateOilStatus;
+    if (originalUpdateOilStatus) {
+        window.updateOilStatus = function() {
+            originalUpdateOilStatus(); // ننفذ الأصلية أولاً
+            // ثم نضيف تحذير التجاوز إذا وجد
+            let site = document.getElementById("g_site").value.trim();
+            let currentHours = parseFloat(document.getElementById("g_hours").value);
+            let statusDiv = document.getElementById("oilStatus");
+            if (site && !isNaN(currentHours) && statusDiv && isOilOverdue(site, currentHours)) {
+                let warning = document.createElement("div");
+                warning.style.color = "#ef4444";
+                warning.style.fontWeight = "bold";
+                warning.style.marginTop = "10px";
+                warning.style.padding = "8px";
+                warning.style.background = "rgba(239,68,68,0.2)";
+                warning.style.borderRadius = "12px";
+                warning.innerHTML = "🚨 تنبيه: تجاوزت 300 ساعة من آخر تغيير زيت! يجب تغيير الزيت فوراً.";
+                if (!statusDiv.querySelector(".overdue-warning")) {
+                    let oldWarning = statusDiv.querySelector(".overdue-warning");
+                    if (oldWarning) oldWarning.remove();
+                    warning.className = "overdue-warning";
+                    statusDiv.appendChild(warning);
+                }
+            } else if (statusDiv) {
+                let oldWarning = statusDiv.querySelector(".overdue-warning");
+                if (oldWarning) oldWarning.remove();
+            }
+        };
+    }
+    
+    // تعديل دالة saveGenerator لتحديث الطوارئ بعد الحفظ
+    let originalSaveGen = window.saveGenerator;
+    if (originalSaveGen) {
+        window.saveGenerator = function() {
+            originalSaveGen();
+            // بعد حفظ الزيارة، نحدث قائمة الطوارئ
+            setTimeout(() => {
+                updateAlarmListWithOverdue();
+                // أيضًا نحدث حالة الزيت في صفحة الزيارة إن كانت مفتوحة
+                if (typeof updateOilStatus === 'function') updateOilStatus();
+            }, 500);
+        };
+    }
+    
+    // تعديل دالة saveOil لتحديث الطوارئ بعد حفظ صيانة زيت
+    let originalSaveOil = window.saveOil;
+    if (originalSaveOil) {
+        window.saveOil = function() {
+            originalSaveOil();
+            setTimeout(() => {
+                updateAlarmListWithOverdue();
+            }, 500);
+        };
+    }
+    
+    // استدعاء تحديث الطوارئ عند تحميل الصفحة وعند فتح تبويب الطوارئ
+    function initAlarmOverdue() {
+        updateAlarmListWithOverdue();
+        let observer = new MutationObserver(() => {
+            let alarmPage = document.getElementById("alarm");
+            if (alarmPage && alarmPage.classList.contains("active")) {
+                updateAlarmListWithOverdue();
+            }
+        });
+        observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    }
+    
+    // تنفيذ بعد تحميل البيانات
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initAlarmOverdue);
+    } else {
+        initAlarmOverdue();
+    }
+})();
+</script>
+<script>
+// ========== إصلاح شامل لمركز الطوارئ (تجاوز 300 ساعة) ==========
+(function() {
+    // دالة حساب التجاوز لموقع معين بناءً على آخر زيارة مسجلة وآخر تغيير زيت
+    function isGeneratorOverdue(siteName, currentHours = null) {
+        // إذا لم يُعطَ currentHours، نحاول إيجاد آخر زيارة مسجلة للموقع
+        let lastGen = null;
+        let allGens = generators.filter(g => g.site === siteName);
+        if (allGens.length > 0) {
+            allGens.sort((a,b) => new Date(b.date) - new Date(a.date));
+            lastGen = allGens[0];
+        }
+        let hours = (currentHours !== null) ? currentHours : (lastGen ? lastGen.hours : null);
+        if (hours === null) return false;
+        
+        // البحث عن آخر تغيير زيت للموقع
+        let oilRecords = oils.filter(o => o.site === siteName);
+        if (oilRecords.length === 0) return false;
+        oilRecords.sort((a,b) => new Date(b.date) - new Date(a.date));
+        let lastOil = oilRecords[0];
+        let diff = hours - lastOil.current;
+        return diff > 300;
+    }
+    
+    // دالة لجلب جميع المولدات المخالفة (تجاوز 300 ساعة)
+    function getOverdueGenerators() {
+        // نجمع جميع المواقع الفريدة من آخر زيارة لكل موقع
+        let latestGenMap = new Map();
+        generators.forEach(g => {
+            let site = g.site;
+            if (!latestGenMap.has(site) || new Date(g.date) > new Date(latestGenMap.get(site).date)) {
+                latestGenMap.set(site, g);
+            }
+        });
+        
+        let overdue = [];
+        for (let [site, gen] of latestGenMap.entries()) {
+            if (isGeneratorOverdue(site, gen.hours)) {
+                overdue.push({
+                    site: site,
+                    hours: gen.hours,
+                    date: gen.date,
+                    lastOilDate: (() => {
+                        let oilRecords = oils.filter(o => o.site === site);
+                        if (oilRecords.length) {
+                            oilRecords.sort((a,b) => new Date(b.date) - new Date(a.date));
+                            return oilRecords[0].date;
+                        }
+                        return "غير معروف";
+                    })()
+                });
+            }
+        }
+        return overdue;
+    }
+    
+    // دالة تحديث صفحة الطوارئ (تستبدل المحتوى بالكامل)
+    function refreshAlarmPage() {
+        let alarmDiv = document.getElementById("alarmList");
+        if (!alarmDiv) return;
+        
+        // 1. المولدات المتجاوزة 300 ساعة
+        let overdueList = getOverdueGenerators();
+        // 2. المولدات المستحقة خلال يومين (من صيانة الزيت)
+        let upcomingList = oils.filter(o => o.nextDate && daysRemaining(o.nextDate) >= 0 && daysRemaining(o.nextDate) <= 2);
+        
+        let html = "";
+        if (overdueList.length === 0 && upcomingList.length === 0) {
+            html = "<div style='text-align:center; padding:30px;'>✅ لا توجد مولدات في حالة طوارئ</div>";
+        } else {
+            if (overdueList.length > 0) {
+                html += `<div class="card-title" style="color:#ef4444;">🚨 مولدات تجاوزت 300 ساعة من آخر تغيير زيت</div>`;
+                overdueList.forEach(g => {
+                    html += `<div class="alarm-box" style="background:rgba(239,68,68,0.3); border:2px solid #ef4444;">
+                                <div>⚠️ <strong>${g.site}</strong></div>
+                                <div>🕒 العداد الحالي: ${g.hours} ساعة</div>
+                                <div>📅 آخر تغيير زيت: ${g.lastOilDate}</div>
+                                <div style="color:#f97316; font-weight:bold;">يجب تغيير الزيت فوراً!</div>
+                             </div>`;
+                });
+            }
+            if (upcomingList.length > 0) {
+                html += `<div class="card-title" style="margin-top:15px;">⏰ مولدات مستحقة خلال يومين (حسب جدول الزيت)</div>`;
+                upcomingList.forEach(o => {
+                    let days = daysRemaining(o.nextDate);
+                    html += `<div class="alarm-box">
+                                <div>⚠️ ${o.site}</div>
+                                <div>التغيير القادم: ${o.nextDate}</div>
+                                <div>⏰ يتبقى ${days} يوم</div>
+                             </div>`;
+                });
+            }
+        }
+        alarmDiv.innerHTML = html;
+    }
+    
+    // تعديل دالة حفظ الزيارة (saveGenerator) لتحديث الطوارئ بعد الحفظ
+    let originalSaveGen = window.saveGenerator;
+    if (originalSaveGen) {
+        window.saveGenerator = function() {
+            // حفظ الزيارة أولاً
+            originalSaveGen();
+            // ثم تحديث الطوارئ
+            setTimeout(() => {
+                refreshAlarmPage();
+                // أيضاً نحدث حالة الزيت في نفس الصفحة إذا كانت مفتوحة
+                if (typeof updateOilStatus === 'function') updateOilStatus();
+            }, 300);
+        };
+    }
+    
+    // تعديل دالة حفظ الزيت (saveOil) لتحديث الطوارئ أيضاً
+    let originalSaveOil = window.saveOil;
+    if (originalSaveOil) {
+        window.saveOil = function() {
+            originalSaveOil();
+            setTimeout(refreshAlarmPage, 300);
+        };
+    }
+    
+    // تعديل دالة updateOilStatus الأصلية لتظهر تحذير التجاوز في حالة الزيت (موجودة بالفعل، لكن نضمن إضافة التحذير)
+    let originalUpdateOilStatus = window.updateOilStatus;
+    if (originalUpdateOilStatus) {
+        window.updateOilStatus = function() {
+            originalUpdateOilStatus();
+            let site = document.getElementById("g_site")?.value.trim();
+            let currentHours = parseFloat(document.getElementById("g_hours")?.value);
+            let statusDiv = document.getElementById("oilStatus");
+            if (site && !isNaN(currentHours) && statusDiv && isGeneratorOverdue(site, currentHours)) {
+                // إضافة تحذير إذا لم يوجد
+                if (!statusDiv.querySelector(".overdue-warning")) {
+                    let warn = document.createElement("div");
+                    warn.className = "overdue-warning";
+                    warn.style.cssText = "color:#ef4444; font-weight:bold; margin-top:10px; padding:8px; background:rgba(239,68,68,0.2); border-radius:12px;";
+                    warn.innerHTML = "🚨 تنبيه: تجاوزت 300 ساعة من آخر تغيير زيت! يجب تغيير الزيت فوراً.";
+                    statusDiv.appendChild(warn);
+                }
+            } else if (statusDiv) {
+                let old = statusDiv.querySelector(".overdue-warning");
+                if (old) old.remove();
+            }
+        };
+    }
+    
+    // مراقب عند فتح صفحة الطوارئ لتحديثها فوراً
+    let observer = new MutationObserver(() => {
+        let alarmPage = document.getElementById("alarm");
+        if (alarmPage && alarmPage.classList.contains("active")) {
+            refreshAlarmPage();
+        }
+    });
+    observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    
+    // تحديث الطوارئ عند تحميل الصفحة
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", refreshAlarmPage);
+    } else {
+        refreshAlarmPage();
+    }
+    
+    // تحديث كل 5 ثوانٍ (احتياطي)
+    setInterval(() => {
+        let alarmPage = document.getElementById("alarm");
+        if (alarmPage && alarmPage.classList.contains("active")) {
+            refreshAlarmPage();
+        }
+    }, 5000);
+})();
+</script>
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/Generator-maintenance-/sw.js', { scope: '/Generator-maintenance-/' })
+        .then(reg => console.log('✅ Service Worker مسجل بنجاح'))
+        .catch(err => console.warn('⚠️ فشل تسجيل Service Worker:', err));
+    }
+</script>
+<script>
+// ============================================================
+//  تحسين صفحة الطوارئ – عرض العداد القديم وكم مشى
+//  أضف هذا الكود في نهاية ملف index.html (قبل </body>)
+// ============================================================
+(function() {
+
+    // 1. دالة تحديث الطوارئ الجديدة (تحل محل القديمة)
+    window.refreshAlarmPage = function() {
+        var alarmDiv = document.getElementById("alarmList");
+        if (!alarmDiv) return;
+
+        // --- المولدات التي تجاوزت 300 ساعة ---
+        var overdueList = [];
+        var latestGenMap = new Map();
+
+        // نأخذ آخر زيارة لكل موقع
+        if (typeof generators !== 'undefined' && generators.length) {
+            generators.forEach(function(g) {
+                var site = g.site;
+                if (!latestGenMap.has(site) || new Date(g.date) > new Date(latestGenMap.get(site).date)) {
+                    latestGenMap.set(site, g);
+                }
+            });
+        }
+
+        // نحسب التجاوز لكل موقع
+        for (var [site, gen] of latestGenMap.entries()) {
+            // نبحث عن آخر تغيير زيت للموقع
+            var oilRecords = (typeof oils !== 'undefined') ? oils.filter(function(o) { return o.site === site; }) : [];
+            if (oilRecords.length === 0) continue;
+            oilRecords.sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
+            var lastOil = oilRecords[0];
+            var diff = gen.hours - lastOil.current;
+            if (diff > 300) {
+                overdueList.push({
+                    site: site,
+                    currentHours: gen.hours,
+                    oldHours: lastOil.current,
+                    diff: diff,
+                    lastOilDate: lastOil.date,
+                    lastVisitDate: gen.date
+                });
+            }
+        }
+
+        // ترتيب تنازلي حسب الأكثر تجاوزاً
+        overdueList.sort(function(a, b) { return b.diff - a.diff; });
+
+        // --- المولدات المستحقة خلال يومين (حسب جدول الزيت) ---
+        var upcomingList = [];
+        if (typeof oils !== 'undefined' && oils.length) {
+            upcomingList = oils.filter(function(o) {
+                return o.nextDate && daysRemaining(o.nextDate) >= 0 && daysRemaining(o.nextDate) <= 2;
+            });
+        }
+
+        // --- بناء الـ HTML ---
+        var html = "";
+        if (overdueList.length === 0 && upcomingList.length === 0) {
+            html = "<div style='text-align:center; padding:30px;'>✅ لا توجد مولدات في حالة طوارئ</div>";
+        } else {
+            if (overdueList.length > 0) {
+                html += "<div class='card-title' style='color:#ef4444;'>🚨 مولدات تجاوزت 300 ساعة من آخر تغيير زيت</div>";
+                overdueList.forEach(function(g) {
+                    var exceed = g.diff - 300;
+                    html += "<div class='alarm-box' style='background:rgba(239,68,68,0.3); border:2px solid #ef4444;'>";
+                    html += "<div>⚠️ <strong>" + g.site + "</strong></div>";
+                    html += "<div>🕒 العداد الحالي: <strong>" + g.currentHours + "</strong> ساعة</div>";
+                    html += "<div>🛢️ العداد القديم (آخر تغيير): <strong>" + g.oldHours + "</strong> ساعة</div>";
+                    html += "<div>📊 المشي: <strong style='color:#f97316;'>" + g.diff + "</strong> ساعة (تجاوز بـ " + exceed + " ساعة)</div>";
+                    html += "<div>📅 آخر تغيير زيت: " + g.lastOilDate + "</div>";
+                    html += "<div style='color:#f97316; font-weight:bold; margin-top:5px;'>⚠️ يجب تغيير الزيت فوراً!</div>";
+                    html += "</div>";
+                });
+            }
+            if (upcomingList.length > 0) {
+                html += "<div class='card-title' style='margin-top:15px;'>⏰ مولدات مستحقة خلال يومين (حسب جدول الزيت)</div>";
+                upcomingList.forEach(function(o) {
+                    var days = daysRemaining(o.nextDate);
+                    html += "<div class='alarm-box'>";
+                    html += "<div>⚠️ " + o.site + "</div>";
+                    html += "<div>العداد الحالي: " + o.current + " ساعة</div>";
+                    html += "<div>التغيير القادم: " + o.nextDate + "</div>";
+                    html += "<div>⏰ يتبقى " + days + " يوم</div>";
+                    html += "</div>";
+                });
+            }
+        }
+        alarmDiv.innerHTML = html;
+    };
+
+    // 2. إضافة زر "تحديث الطوارئ" في صفحة الطوارئ
+    function addUpdateButton() {
+        var alarmPage = document.getElementById("alarm");
+        if (!alarmPage) return;
+        var existingBtn = document.getElementById("alarmUpdateBtn");
+        if (existingBtn) return;
+
+        var card = alarmPage.querySelector(".card");
+        if (!card) return;
+
+        var listDiv = document.getElementById("alarmList");
+        if (!listDiv) return;
+
+        var btn = document.createElement("button");
+        btn.id = "alarmUpdateBtn";
+        btn.className = "btn-save";
+        btn.style.cssText = "width:auto; padding:10px 25px; background:var(--accent); margin-top:10px; display:inline-flex; align-items:center; gap:8px;";
+        btn.innerHTML = "🔄 تحديث الطوارئ";
+        btn.onclick = function() {
+            window.refreshAlarmPage();
+            if (typeof showToast === "function") showToast("🔄 تم تحديث الطوارئ");
+        };
+        // نضعه قبل listDiv
+        card.insertBefore(btn, listDiv);
+    }
+
+    // 3. مراقب لفتح صفحة الطوارئ
+    var observer = new MutationObserver(function() {
+        var alarmPage = document.getElementById("alarm");
+        if (alarmPage && alarmPage.classList.contains("active")) {
+            addUpdateButton();
+            window.refreshAlarmPage();
+        }
+    });
+    observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+
+    // 4. تنفيذ أولي عند تحميل الصفحة
+    function initAlarm() {
+        window.refreshAlarmPage();
+        addUpdateButton();
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initAlarm);
+    } else {
+        initAlarm();
+    }
+
+})();
+</script>
+<script>
+// ============================================================
+//  تعطيل دالة renderAlarms القديمة واستبدالها بالنسخة المحسنة
+//  أضف هذا الكود في نهاية index.html (قبل </body>)
+// ============================================================
+(function() {
+
+    // 1. حفظ النسخة المحسنة من refreshAlarmPage
+    var enhancedRefresh = window.refreshAlarmPage;
+
+    // 2. استبدال دالة renderAlarms الأصلية
+    window.renderAlarms = function() {
+        // بدلاً من عرض المحتوى القديم، نستخدم الدالة المحسنة
+        if (typeof enhancedRefresh === 'function') {
+            enhancedRefresh();
+        } else {
+            // في حال لم توجد الدالة المحسنة، ننفذ المحتوى الافتراضي
+            let alarms = (typeof oils !== 'undefined') ? oils.filter(o => o.nextDate && daysRemaining(o.nextDate) >= 0 && daysRemaining(o.nextDate) <= 2) : [];
+            let html = alarms.length ? alarms.map(o => `<div class="alarm-box"><div>🚨 ${o.site}</div><div>العداد: ${o.current} H</div><div>متوسط التشغيل: ${o.avgDailyHours} س/يوم</div><div>التغيير القادم: ${o.nextDate}</div><div>⏰ يتبقى ${daysRemaining(o.nextDate)} يوم</div></div>`).join('') : "<div style='text-align:center; padding:30px;'>✅ لا توجد مولدات في حالة طوارئ</div>";
+            document.getElementById("alarmList").innerHTML = html;
+        }
+    };
+
+    // 3. منع أي استدعاء آخر لـ renderAlarms من تغيير المحتوى بعد التحديث
+    // نضيف مراقباً لمنع التعديل على alarmList بعد تحديثه من refreshAlarmPage
+    var alarmListObserver = new MutationObserver(function(mutations) {
+        // إذا تم تغيير المحتوى بطريقة غير متوقعة، نعيده إلى الشكل المحسن
+        var alarmDiv = document.getElementById('alarmList');
+        if (!alarmDiv) return;
+        // نتحقق إذا كان المحتوى لا يحتوي على تفاصيل العداد القديم
+        var hasDetails = alarmDiv.innerHTML.includes('العداد القديم');
+        if (!hasDetails && alarmDiv.innerHTML.length > 50) {
+            // إذا كان المحتوى مبسطاً (بدون تفاصيل)، نعيد التحديث
+            if (typeof enhancedRefresh === 'function') {
+                setTimeout(enhancedRefresh, 10);
+            }
+        }
+    });
+
+    // نراقب التغييرات على alarmList
+    var targetNode = document.getElementById('alarmList');
+    if (targetNode) {
+        alarmListObserver.observe(targetNode, { childList: true, subtree: true, characterData: true });
+    }
+
+    // 4. تنفيذ التحديث عند تحميل الصفحة
+    function initAlarmFix() {
+        if (typeof enhancedRefresh === 'function') {
+            setTimeout(enhancedRefresh, 100);
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAlarmFix);
+    } else {
+        initAlarmFix();
+    }
+
+    console.log('✅ تم تعطيل renderAlarms القديمة واستبدالها بالنسخة المحسنة');
+
+})();
+</script>
+<script>
+// ============================================================
+//  تحسينات متقدمة: تأثيرات صوتية، مرئية، إشعارات، تحديث تلقائي
+//  أضف هذا الكود في نهاية ملف index.html (قبل </body>)
+// ============================================================
+(function() {
+
+    // ========== 1. نظام الأصوات (بدون ملفات خارجية) ==========
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function playSound(type) {
+        try {
+            if (!audioCtx) audioCtx = new AudioCtx();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            if (type === 'alert') {
+                // صوت إنذار حاد (مكرر)
+                oscillator.frequency.value = 800;
+                gainNode.gain.value = 0.3;
+                oscillator.start();
+                setTimeout(() => { oscillator.stop(); }, 200);
+                setTimeout(() => {
+                    const osc2 = audioCtx.createOscillator();
+                    const gain2 = audioCtx.createGain();
+                    osc2.connect(gain2);
+                    gain2.connect(audioCtx.destination);
+                    osc2.frequency.value = 600;
+                    gain2.gain.value = 0.3;
+                    osc2.start();
+                    setTimeout(() => { osc2.stop(); }, 200);
+                }, 300);
+            } else if (type === 'warning') {
+                // صوت تحذيري
+                oscillator.frequency.value = 500;
+                gainNode.gain.value = 0.2;
+                oscillator.start();
+                setTimeout(() => { oscillator.stop(); }, 300);
+            } else if (type === 'success') {
+                // صوت نجاح
+                oscillator.frequency.value = 440;
+                gainNode.gain.value = 0.15;
+                oscillator.start();
+                setTimeout(() => {
+                    oscillator.frequency.value = 660;
+                }, 100);
+                setTimeout(() => { oscillator.stop(); }, 250);
+            }
+        } catch(e) { /* تجاهل الأخطاء في حالة عدم دعم الصوت */ }
+    }
+
+    // ========== 2. تأثيرات مرئية متحركة ==========
+    function addVisualEffects() {
+        // إضافة تأثير وميض للعناصر الحرجة
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes criticalPulse {
+                0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+                70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+            }
+            @keyframes warningPulse {
+                0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+                70% { box-shadow: 0 0 0 12px rgba(245, 158, 11, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+            }
+            @keyframes slideIn {
+                from { opacity: 0; transform: translateY(-20px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .critical-item {
+                animation: criticalPulse 1.5s ease-in-out infinite !important;
+                border-left: 5px solid #ef4444 !important;
+                background: rgba(239, 68, 68, 0.15) !important;
+            }
+            .warning-item {
+                animation: warningPulse 2s ease-in-out infinite !important;
+                border-left: 5px solid #f59e0b !important;
+                background: rgba(245, 158, 11, 0.12) !important;
+            }
+            .alarm-box {
+                transition: all 0.3s ease;
+                border-radius: 16px !important;
+                padding: 18px !important;
+                margin-bottom: 14px !important;
+            }
+            .alarm-box:hover {
+                transform: scale(1.01);
+                box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            }
+            .countdown-number {
+                font-size: 28px !important;
+                font-weight: 900 !important;
+                display: inline-block;
+                background: rgba(0, 198, 255, 0.15);
+                padding: 4px 16px;
+                border-radius: 40px;
+            }
+            .alarm-icon {
+                font-size: 32px;
+                display: inline-block;
+                animation: iconPulse 1s ease-in-out infinite;
+            }
+            @keyframes iconPulse {
+                0%, 100% { transform: scale(1); }
+                50% { transform: scale(1.2); }
+            }
+            .badge-critical {
+                background: #ef4444 !important;
+                color: white !important;
+                font-weight: 900 !important;
+                padding: 4px 12px !important;
+                border-radius: 30px !important;
+                font-size: 12px !important;
+            }
+            .alarm-title {
+                font-size: 20px !important;
+                font-weight: 900 !important;
+                margin-bottom: 12px !important;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .alarm-detail {
+                font-size: 15px !important;
+                margin: 6px 0 !important;
+                padding: 4px 0 !important;
+                border-bottom: 1px solid rgba(255,255,255,0.05);
+            }
+            .alarm-detail:last-child {
+                border-bottom: none;
+            }
+            .alarm-detail strong {
+                color: #f8fafc;
+                font-weight: 800;
+            }
+            .alarm-highlight {
+                color: #f97316;
+                font-weight: 900;
+                font-size: 18px;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // ========== 3. إشعارات المتصفح ==========
+    function sendNotification(title, body, tag) {
+        if (!('Notification' in window)) return;
+        if (Notification.permission === 'granted') {
+            try {
+                new Notification(title, {
+                    body: body,
+                    icon: 'icon-192.png',
+                    tag: tag || 'alarm',
+                    vibrate: [200, 100, 200],
+                    requireInteraction: true
+                });
+            } catch(e) { /* تجاهل */ }
+        } else if (Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    }
+
+    // ========== 4. تحديث تلقائي (كل دقيقة) ==========
+    let autoRefreshInterval = null;
+    function startAutoRefresh() {
+        if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+        autoRefreshInterval = setInterval(function() {
+            var alarmPage = document.getElementById('alarm');
+            if (alarmPage && alarmPage.classList.contains('active')) {
+                if (typeof refreshAlarmPage === 'function') {
+                    refreshAlarmPage();
+                }
+                // تحديث العدادات التنازلي أيضاً
+                if (typeof renderCountdown === 'function') {
+                    renderCountdown();
+                }
+            }
+        }, 60000); // كل 60 ثانية
+    }
+
+    // ========== 5. وظيفة رئيسية تجمع كل شيء ==========
+    function initEnhancements() {
+        // أضف التأثيرات البصرية
+        addVisualEffects();
+
+        // ابدأ التحديث التلقائي
+        startAutoRefresh();
+
+        // اطلب إذن الإشعارات إذا لم يكن ممنوحاً
+        if ('Notification' in window && Notification.permission === 'default') {
+            setTimeout(function() {
+                Notification.requestPermission();
+            }, 3000);
+        }
+
+        console.log('✅ تم تفعيل جميع التحسينات الصوتية والمرئية');
+    }
+
+    // ========== 6. دمج مع دالة الطوارئ الحالية (إضافة الأصوات والإشعارات) ==========
+    // حفظ الدالة الأصلية إن وجدت
+    var originalRefreshAlarm = window.refreshAlarmPage;
+
+    // استبدالها بوظيفة محسنة
+    window.refreshAlarmPage = function() {
+        // تنفيذ الدالة الأصلية (من الكود السابق)
+        if (originalRefreshAlarm) {
+            originalRefreshAlarm();
+        }
+
+        // إضافة التأثيرات على العناصر بعد التحديث
+        setTimeout(function() {
+            var alarmDiv = document.getElementById('alarmList');
+            if (!alarmDiv) return;
+
+            var boxes = alarmDiv.querySelectorAll('.alarm-box');
+            var hasCritical = false;
+            var hasWarning = false;
+
+            boxes.forEach(function(box, index) {
+                // إضافة تأثير تأخيري (ظهور متدرج)
+                box.style.animationDelay = (index * 100) + 'ms';
+                box.style.animation = 'slideIn 0.4s ease forwards';
+
+                // كشف نوع العنصر
+                var text = box.innerText || '';
+                if (text.includes('تجاوزت 300 ساعة') || text.includes('يجب تغيير الزيت فوراً')) {
+                    box.classList.add('critical-item');
+                    hasCritical = true;
+                    // إضافة أيقونة حمراء
+                    var firstDiv = box.querySelector('div:first-child');
+                    if (firstDiv && !firstDiv.innerHTML.includes('🚨')) {
+                        firstDiv.innerHTML = '<span class="alarm-icon">🚨</span> ' + firstDiv.innerHTML;
+                    }
+                } else if (text.includes('يتبقى') && text.includes('يوم')) {
+                    box.classList.add('warning-item');
+                    hasWarning = true;
+                }
+            });
+
+            // تشغيل الأصوات والإشعارات حسب الحالة
+            if (hasCritical) {
+                playSound('alert');
+                // إشعار للمولدات المتجاوزة
+                var criticalSites = [];
+                boxes.forEach(function(box) {
+                    if (box.classList.contains('critical-item')) {
+                        var siteElem = box.querySelector('strong');
+                        if (siteElem) criticalSites.push(siteElem.innerText);
+                    }
+                });
+                if (criticalSites.length > 0) {
+                    var msg = 'المولدات المتجاوزة: ' + criticalSites.join('، ');
+                    sendNotification('🚨 تنبيه طوارئ!', msg, 'critical-alarm');
+                }
+            } else if (hasWarning) {
+                playSound('warning');
+                sendNotification('⚠️ تنبيه', 'يوجد مولدات مستحقة خلال يومين', 'warning-alarm');
+            }
+
+        }, 100);
+    };
+
+    // ========== 7. تشغيل كل شيء عند تحميل الصفحة ==========
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initEnhancements);
+    } else {
+        initEnhancements();
+    }
+
+    // ========== 8. إضافة زر الصوت اختياري (في صفحة الطوارئ) ==========
+    function addSoundToggleButton() {
+        var alarmPage = document.getElementById('alarm');
+        if (!alarmPage) return;
+        var existingBtn = document.getElementById('soundToggleBtn');
+        if (existingBtn) return;
+
+        var card = alarmPage.querySelector('.card');
+        if (!card) return;
+
+        // نضيفه بعد زر التحديث (إذا كان موجوداً)
+        var updateBtn = document.getElementById('alarmUpdateBtn');
+        var btn = document.createElement('button');
+        btn.id = 'soundToggleBtn';
+        btn.className = 'btn-outline';
+        btn.style.cssText = 'width:auto; padding:8px 18px; margin-top:8px; display:inline-flex; align-items:center; gap:8px; font-size:13px;';
+        btn.innerHTML = '🔊 تشغيل الصوت';
+        btn.onclick = function() {
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+                btn.innerHTML = '🔊 الصوت مفعل';
+                btn.style.borderColor = '#10b981';
+                btn.style.color = '#10b981';
+            } else if (audioCtx && audioCtx.state === 'running') {
+                audioCtx.suspend();
+                btn.innerHTML = '🔇 كتم الصوت';
+                btn.style.borderColor = '#ef4444';
+                btn.style.color = '#ef4444';
+            } else {
+                try {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    btn.innerHTML = '🔊 الصوت مفعل';
+                    btn.style.borderColor = '#10b981';
+                    btn.style.color = '#10b981';
+                } catch(e) {
+                    alert('متصفحك لا يدعم الصوت');
+                }
+            }
+        };
+
+        // نضعه بعد زر التحديث أو في نهاية الكارد
+        if (updateBtn) {
+            updateBtn.insertAdjacentElement('afterend', btn);
+        } else {
+            var listDiv = document.getElementById('alarmList');
+            if (listDiv) {
+                card.insertBefore(btn, listDiv);
+            }
+        }
+    }
+
+    // مراقب لإضافة زر الصوت عند فتح صفحة الطوارئ
+    var soundObserver = new MutationObserver(function() {
+        var alarmPage = document.getElementById('alarm');
+        if (alarmPage && alarmPage.classList.contains('active')) {
+            setTimeout(addSoundToggleButton, 300);
+        }
+    });
+    soundObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+})();
+</script>
+<script>
+// ============================================================
+//  ربط زيارة المولد مع جدول الزيت وتقارير الزيت (نسخة محسنة)
+//  أضف هذا الكود في نهاية index.html (قبل </body>)
+// ============================================================
+(function() {
+
+    // دالة للتحقق من تجاوز الزيت
+    function checkOilOverdue(siteName, currentHours) {
+        if (typeof oils === 'undefined' || !oils.length) return null;
+        var siteOils = oils.filter(function(o) {
+            return o.site === siteName || o.site.startsWith(siteName + ' - مولد');
+        });
+        if (siteOils.length === 0) return null;
+        siteOils.sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
+        var lastOil = siteOils[0];
+        var diff = currentHours - lastOil.current;
+        return {
+            lastOil: lastOil,
+            diff: diff,
+            isOverdue: diff > 300,
+            remaining: 300 - diff,
+            lastOilDate: lastOil.date,
+            lastOilHours: lastOil.current,
+            currentHours: currentHours
+        };
+    }
+
+    // دالة لتحديث حالة الزيت في localStorage و Firebase
+    function updateOilStatusGlobal(site, currentHours) {
+        var status = checkOilOverdue(site, currentHours);
+        if (!status) return;
+
+        // تخزين في localStorage
+        try {
+            var allStatus = JSON.parse(localStorage.getItem('oilOverdueStatus') || '{}');
+            allStatus[site] = {
+                currentHours: status.currentHours,
+                lastOilDate: status.lastOilDate,
+                lastOilHours: status.lastOilHours,
+                diff: status.diff,
+                isOverdue: status.isOverdue,
+                remaining: status.remaining,
+                updatedAt: new Date().toISOString()
+            };
+            localStorage.setItem('oilOverdueStatus', JSON.stringify(allStatus));
+            console.log('✅ تم حفظ حالة الزيت لـ ' + site + ' في localStorage');
+        } catch(e) {
+            console.warn('فشل حفظ في localStorage:', e);
+        }
+
+        // تخزين في Firebase
+        if (typeof database !== 'undefined' && database) {
+            try {
+                database.ref('oilOverdueStatus/' + site).set({
+                    currentHours: status.currentHours,
+                    lastOilDate: status.lastOilDate,
+                    lastOilHours: status.lastOilHours,
+                    diff: status.diff,
+                    isOverdue: status.isOverdue,
+                    remaining: status.remaining,
+                    updatedAt: new Date().toISOString()
+                });
+                console.log('✅ تم حفظ حالة الزيت لـ ' + site + ' في Firebase');
+            } catch(e) {
+                console.warn('فشل حفظ في Firebase:', e);
+            }
+        }
+
+        // تحديث واجهة المستخدم في صفحة الزيارة
+        if (typeof updateOilStatus === 'function') {
+            updateOilStatus();
+        }
+
+        // تحديث مركز الطوارئ
+        if (typeof refreshAlarmPage === 'function') {
+            setTimeout(refreshAlarmPage, 200);
+        }
+
+        // عرض تنبيه للمستخدم
+        if (status.isOverdue) {
+            var msg = '🚨 ' + site + ' تجاوز 300 ساعة!';
+            if (typeof showToast === 'function') {
+                showToast(msg + ' (تجاوز بـ ' + (status.diff - 300) + ' ساعة)', 'error');
+            } else {
+                alert(msg);
+            }
+            if (typeof playSound === 'function') {
+                playSound('alert');
+            }
+        } else {
+            var remainingMsg = '⏳ ' + site + ' متبقي ' + status.remaining + ' ساعة';
+            if (typeof showToast === 'function') {
+                showToast(remainingMsg, 'success');
+            }
+        }
+
+        return status;
+    }
+
+    // حفظ الدالة الأصلية saveGenerator
+    var originalSaveGen = window.saveGenerator;
+
+    // استبدال saveGenerator بالنسخة المحسنة
+    window.saveGenerator = function() {
+        // تنفيذ الدالة الأصلية لحفظ الزيارة
+        if (originalSaveGen) {
+            originalSaveGen();
+        }
+
+        // بعد الحفظ، نتحقق من حالة الزيت
+        setTimeout(function() {
+            var siteInput = document.getElementById('g_site');
+            if (!siteInput) return;
+            var site = siteInput.value.trim();
+            if (!site) return;
+
+            var unit = document.getElementById('g_unit') ? document.getElementById('g_unit').value : '1';
+            var fullSite = (typeof getFullSiteName === 'function') ? getFullSiteName(site, unit) : site;
+
+            var hoursInput = document.getElementById('g_hours');
+            if (!hoursInput) return;
+            var currentHours = parseFloat(hoursInput.value);
+            if (isNaN(currentHours)) return;
+
+            // تحديث للموقع الرئيسي
+            updateOilStatusGlobal(fullSite, currentHours);
+
+            // إذا كان الموقع مزدوجاً، نحدّث كلا المولدين
+            if (site === 'بالمس فلج (النخيله)') {
+                var site1 = site + ' - مولد 1';
+                var site2 = site + ' - مولد 2';
+                // نأخذ قراءات المولدين من الحقول المزدوجة إن وجدت
+                var h1 = parseFloat(document.getElementById('g_h1')?.value);
+                var h2 = parseFloat(document.getElementById('g_h2')?.value);
+                if (!isNaN(h1)) updateOilStatusGlobal(site1, h1);
+                if (!isNaN(h2)) updateOilStatusGlobal(site2, h2);
+            }
+
+            // تحديث العدادات التنازلي
+            if (typeof renderCountdown === 'function') {
+                renderCountdown();
+            }
+
+            // تحديث الإحصائيات
+            if (typeof calculateDieselConsumption === 'function') {
+                calculateDieselConsumption();
+            }
+
+            console.log('✅ تم تحديث حالة الزيت بعد حفظ الزيارة');
+
+        }, 500);
+    };
+
+    // دالة لجلب حالة الزيت لموقع معين
+    window.getOilStatus = function(siteName) {
+        try {
+            var allStatus = JSON.parse(localStorage.getItem('oilOverdueStatus') || '{}');
+            return allStatus[siteName] || null;
+        } catch(e) {
+            return null;
+        }
+    };
+
+    // دالة لجلب جميع المواقع المتجاوزة
+    window.getOverdueSites = function() {
+        try {
+            var allStatus = JSON.parse(localStorage.getItem('oilOverdueStatus') || '{}');
+            var overdue = [];
+            for (var site in allStatus) {
+                if (allStatus[site].isOverdue) {
+                    overdue.push({
+                        site: site,
+                        status: allStatus[site]
+                    });
+                }
+            }
+            overdue.sort(function(a, b) {
+                return b.status.diff - a.status.diff;
+            });
+            return overdue;
+        } catch(e) {
+            return [];
+        }
+    };
+
+    // دالة مزامنة من Firebase
+    function syncOilStatusFromFirebase() {
+        if (typeof database === 'undefined' || !database) return;
+        try {
+            database.ref('oilOverdueStatus').on('value', function(snap) {
+                if (snap.exists()) {
+                    var data = snap.val();
+                    try {
+                        localStorage.setItem('oilOverdueStatus', JSON.stringify(data));
+                        console.log('✅ تم مزامنة بيانات التجاوز من Firebase');
+                    } catch(e) { /* تجاهل */ }
+                    // تحديث واجهة المستخدم
+                    var alarmPage = document.getElementById('alarm');
+                    if (alarmPage && alarmPage.classList.contains('active')) {
+                        if (typeof refreshAlarmPage === 'function') {
+                            refreshAlarmPage();
+                        }
+                    }
+                }
+            });
+        } catch(e) { /* تجاهل */ }
+    }
+
+    // دالة للتهيئة
+    function initOilLink() {
+        syncOilStatusFromFirebase();
+        console.log('✅ تم تفعيل ربط زيارة المولد مع جدول الزيت وتقارير الزيت');
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initOilLink);
+    } else {
+        initOilLink();
+    }
+
+})();
+</script>
+<script>
+// ============================================================
+//   إضافة ميزة "فتح التطبيق ببصمة الجوال" (Credentials API)
+// ============================================================
+
+// 1. زر البصمة في شاشة الدخول (سيظهر تلقائياً إذا كان يدعم)
+(function addBiometricButton() {
+    let loginDiv = document.querySelector('#loginScreen > div');
+    if (!loginDiv) return;
+    
+    // نضيف زر البصمة بعد زر "دخول النظام"
+    let existingBtn = document.getElementById('biometricBtn');
+    if (existingBtn) return;
+    
+    let btn = document.createElement('button');
+    btn.id = 'biometricBtn';
+    btn.className = 'btn-outline';
+    btn.style.marginTop = '12px';
+    btn.innerHTML = '🖐️ فتح بالبصمة (Face ID)';
+    btn.onclick = biometricLogin;
+    btn.style.display = 'none'; // مخفي حتى نتأكد من دعم المتصفح
+    
+    // نضيفه قبل رسالة الخطأ
+    let errorDiv = document.getElementById('loginError');
+    if (errorDiv) {
+        loginDiv.insertBefore(btn, errorDiv);
+    } else {
+        loginDiv.appendChild(btn);
+    }
+    
+    // التحقق من دعم المتصفح لمدير كلمات المرور
+    if (navigator.credentials && navigator.credentials.get) {
+        // نفحص إذا كان هناك بيانات محفوظة سابقاً
+        navigator.credentials.get({ password: true, mediation: 'silent' })
+        .then(cred => {
+            if (cred) {
+                document.getElementById('biometricBtn').style.display = 'block';
+            } else {
+                // نفحص بشكل غير صامت لمعرفة إذا كان المستخدم لديه بيانات محفوظة
+                navigator.credentials.get({ password: true, mediation: 'optional' })
+                .then(cred2 => {
+                    if (cred2) {
+                        document.getElementById('biometricBtn').style.display = 'block';
+                    }
+                }).catch(() => {});
+            }
+        }).catch(() => {});
+    }
+})();
+
+// 2. دالة تسجيل الدخول بالبصمة
+async function biometricLogin() {
+    try {
+        // نطلب من المتصفح جلب بيانات الدخول المحفوظة مع تفعيل المصادقة الحيوية
+        const cred = await navigator.credentials.get({
+            password: true,
+            mediation: 'required' // <-- هذه القيمة تفرض ظهور نافذة البصمة/الوجه
+        });
+        
+        if (cred && cred.id && cred.password) {
+            // نملأ الحقول تلقائياً
+            document.getElementById('loginPhone').value = cred.id;
+            document.getElementById('loginPass').value = cred.password;
+            // ننفذ عملية الدخول
+            loginSystem();
+            showToast('✅ تم الدخول بواسطة البصمة');
+        } else {
+            showToast('❌ لم يتم العثور على بيانات محفوظة', 'error');
+        }
+    } catch (error) {
+        console.warn('فشل المصادقة الحيوية:', error);
+        if (error.name === 'AbortError' || error.message.includes('abort')) {
+            showToast('⏹️ تم إلغاء المصادقة', 'error');
+        } else {
+            showToast('❌ فشل المصادقة: ' + error.message, 'error');
+        }
+    }
+}
+
+// 3. تعديل دالة loginSystem الأصلية لحفظ بيانات الدخول تلقائياً بعد نجاح الدخول
+// نأخذ الدالة الأصلية ونضيف لها حفظ البيانات
+let originalLogin = window.loginSystem;
+if (originalLogin) {
+    window.loginSystem = async function() {
+        // ننفذ الدالة الأصلية أولاً
+        await originalLogin();
+        
+        // بعد نجاح الدخول (إذا لم تظهر شاشة الخطأ)، نحفظ البيانات
+        let phone = document.getElementById('loginPhone').value.trim();
+        let pass = document.getElementById('loginPass').value.trim();
+        let errorDiv = document.getElementById('loginError');
+        
+        // إذا كانت بيانات الدخول صحيحة (لا يوجد خطأ ظاهر)
+        if (errorDiv && errorDiv.style.display === 'none' && phone && pass) {
+            try {
+                // نبحث عن اسم المستخدم من قائمة users
+                let userName = users[phone]?.name || 'مستخدم';
+                const cred = new PasswordCredential({
+                    id: phone,
+                    password: pass,
+                    name: userName
+                });
+                await navigator.credentials.store(cred);
+                console.log('✅ تم حفظ بيانات الدخول في مدير كلمات المرور');
+            } catch (e) {
+                console.warn('⚠️ فشل حفظ بيانات الدخول:', e);
+            }
+        }
+    };
+}
+</script>
+<script>
+// ============================================================
+//   نظام المزامنة دون اتصال (Offline Sync) - حفظ العمليات المعلقة
+// ============================================================
+
+// 1. دالة للحصول على قائمة العمليات المعلقة من localStorage
+function getPendingOperations() {
+    let pending = localStorage.getItem('pendingOperations');
+    return pending ? JSON.parse(pending) : [];
+}
+
+// 2. دالة لحفظ قائمة العمليات المعلقة
+function savePendingOperations(operations) {
+    localStorage.setItem('pendingOperations', JSON.stringify(operations));
+}
+
+// 3. دالة لإضافة عملية جديدة إلى قائمة الانتظار
+function addPendingOperation(type, data) {
+    let ops = getPendingOperations();
+    ops.push({
+        type: type,        // 'generator' أو 'oil'
+        data: data,
+        timestamp: Date.now()
+    });
+    savePendingOperations(ops);
+    // محاولة رفع العمليات فوراً (إذا كان الاتصال متاحاً)
+    processPendingOperations();
+}
+
+// 4. دالة لرفع جميع العمليات المعلقة إلى Firebase
+async function processPendingOperations() {
+    if (!database) {
+        console.warn('⚠️ Firebase غير متاح، سيتم المحاولة لاحقاً');
+        return;
+    }
+    
+    let ops = getPendingOperations();
+    if (ops.length === 0) return;
+    
+    console.log(`📤 محاولة رفع ${ops.length} عملية معلقة...`);
+    
+    let remaining = [];
+    let successCount = 0;
+    
+    for (let op of ops) {
+        try {
+            if (op.type === 'generator') {
+                // نضيف البيانات إلى مصفوفة generators أولاً (للتأكد من عدم فقدانها)
+                generators.push(op.data);
+                await database.ref('generators').set(generators);
+            } else if (op.type === 'oil') {
+                oils.push(op.data);
+                await database.ref('oils').set(oils);
+            }
+            successCount++;
+            console.log(`✅ تم رفع عملية ${op.type} بنجاح`);
+        } catch (error) {
+            console.warn(`⚠️ فشل رفع عملية ${op.type}:`, error);
+            remaining.push(op); // نتركها للمحاولة لاحقاً
+        }
+    }
+    
+    // تحديث قائمة الانتظار بالعمليات المتبقية
+    savePendingOperations(remaining);
+    
+    if (successCount > 0) {
+        showToast(`✅ تم رفع ${successCount} عملية إلى السحابة`);
+        // تحديث واجهة السجلات
+        renderRecords();
+        renderCountdown();
+        renderAlarms();
+    }
+    
+    if (remaining.length > 0) {
+        console.warn(`⏳ تبقى ${remaining.length} عملية لم تُرفع، سيتم المحاولة لاحقاً`);
+    }
+}
+
+// 5. تعديل دالة saveGenerator الأصلية لحفظ البيانات محلياً أولاً
+let originalSaveGen = window.saveGenerator;
+if (originalSaveGen) {
+    window.saveGenerator = function() {
+        // نجمع البيانات كما كانت
+        let site = document.getElementById("g_site").value.trim();
+        if(!site) { showToast("⚠️ أدخل الموقع", "error"); return; }
+        let unit = document.getElementById("g_unit").value;
+        let fullSite = getFullSiteName(site, unit);
+        let hours = parseFloat(document.getElementById("g_hours").value);
+        let diesel = parseFloat(document.getElementById("g_diesel").value);
+        if(isNaN(hours)) { showToast("⚠️ أدخل العداد", "error"); return; }
+        let data = {
+            id: generateId(),
+            recordedBy: currentUserName,
+            recordedByPhone: currentUserPhone,
+            date: document.getElementById("g_date").value || new Date().toISOString().split('T')[0],
+            site: fullSite,
+            hours: hours,
+            diesel: isNaN(diesel) ? 0 : diesel,
+            note: document.getElementById("g_note").value || ""
+        };
+        
+        // 1. نضيف البيانات إلى المصفوفة المحلية (على الفور)
+        if(editIndex > -1 && editType === 'gen') {
+            if(generators[editIndex].recordedByPhone !== currentUserPhone && generators[editIndex].recordedBy !== currentUserName) {
+                showToast("❌ لا يمكنك تعديل سجل ليس لك", "error"); return;
+            }
+            data.id = generators[editIndex].id;
+            generators[editIndex] = data;
+            editIndex = -1; editType = "";
+        } else {
+            generators.push(data);
+        }
+        
+        // 2. حفظ في localStorage
+        saveToLocal();
+        
+        // 3. إضافة العملية إلى قائمة الانتظار للمزامنة
+        addPendingOperation('generator', data);
+        
+        // 4. تنظيف النموذج والانتقال للسجلات
+        playSave();
+        showToast("✅ تم حفظ الزيارة (محلياً)");
+        resetGeneratorForm();
+        go('records');
+    };
+}
+
+// 6. تعديل دالة saveOil الأصلية
+let originalSaveOil = window.saveOil;
+if (originalSaveOil) {
+    window.saveOil = function() {
+        let site = document.getElementById("o_site").value.trim();
+        if(!site) { showToast("⚠️ أدخل الموقع", "error"); return; }
+        let unit = document.getElementById("o_unit").value;
+        let fullSite = getFullSiteName(site, unit);
+        let current = parseFloat(document.getElementById("o_current").value);
+        let diesel = parseFloat(document.getElementById("o_diesel").value);
+        let avg = parseFloat(document.getElementById("o_avgDaily").value);
+        let note = document.getElementById("o_note")?.value || "";
+        if(isNaN(current) || isNaN(avg) || avg<=0) { showToast("⚠️ أكمل البيانات", "error"); return; }
+        let recordDate = document.getElementById("o_date").value ? new Date(document.getElementById("o_date").value) : new Date();
+        let nextDate = calcNextDate(current, avg, recordDate);
+        let data = {
+            id: generateId(),
+            recordedBy: currentUserName,
+            recordedByPhone: currentUserPhone,
+            date: recordDate.toISOString().split('T')[0],
+            site: fullSite,
+            current: current,
+            diesel: isNaN(diesel) ? 0 : diesel,
+            avgDailyHours: avg,
+            nextDate: nextDate,
+            note: note,
+            filters: {
+                oil: document.getElementById("f_oil").checked,
+                diesel: document.getElementById("f_diesel").checked,
+                air: document.getElementById("f_air").checked
+            }
+        };
+        
+        // 1. نضيف للمصفوفة المحلية
+        if(editIndex > -1 && editType === 'oil') {
+            if(oils[editIndex].recordedByPhone !== currentUserPhone && oils[editIndex].recordedBy !== currentUserName) {
+                showToast("❌ لا يمكنك تعديل سجل ليس لك", "error"); return;
+            }
+            data.id = oils[editIndex].id;
+            oils[editIndex] = data;
+            editIndex = -1; editType = "";
+        } else {
+            oils.push(data);
+        }
+        
+        // 2. حفظ محلي
+        saveToLocal();
+        
+        // 3. إضافة لقائمة الانتظار
+        addPendingOperation('oil', data);
+        
+        // 4. إشعار المستخدم
+        if(isAlarmDue(nextDate)) { playAlarm(); showToast(`🚨 إنذار: ${fullSite} يتبقى يومان`, "error"); }
+        else playSave();
+        showToast("✅ سجلت الصيانة (محلياً)");
+        resetOilForm();
+        go('records');
+    };
+}
+
+// 7. دالة لمحاولة رفع العمليات المعلقة عند عودة الاتصال
+function setupOfflineSync() {
+    // عند تحميل الصفحة، نحاول رفع أي عمليات معلقة
+    setTimeout(processPendingOperations, 1000);
+    
+    // إضافة مستمع للاتصال (عند عودة النت)
+    window.addEventListener('online', function() {
+        console.log('🌐 تم استعادة الاتصال بالإنترنت، محاولة مزامنة العمليات المعلقة...');
+        showToast('🔄 جاري مزامنة البيانات مع السحابة...');
+        processPendingOperations();
+    });
+}
+
+// 8. استدعاء الإعداد عند تحميل الصفحة
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setupOfflineSync);
+} else {
+    setupOfflineSync();
+}
+
+// 9. تعديل دالة pushToFirebase الأصلية لتتجاوز المزامنة (لأننا نديرها بأنفسنا)
+// نستبدل pushToFirebase بدالة جديدة تقوم بالرفع الفوري فقط إذا كان هناك اتصال
+// لكننا سنبقيها كما هي، لأننا نستخدم addPendingOperation التي ترفع تلقائياً.
+// ونضيف دالة لمزامنة يدوية من شاشة السجلات (زر "مزامنة")
+function manualSync() {
+    showToast('🔄 جاري المزامنة...');
+    processPendingOperations();
+}
+
+// إضافة زر مزامنة في صفحة السجلات (بجوار النسخ الاحتياطي)
+// نضيفه بعد تحميل الصفحة
+setTimeout(() => {
+    let recordsDiv = document.getElementById('records');
+    if (recordsDiv) {
+        let btnContainer = recordsDiv.querySelector('div[style*="display:flex; gap:10px; margin-bottom:15px;"]');
+        if (btnContainer) {
+            let syncBtn = document.createElement('button');
+            syncBtn.className = 'btn-save';
+            syncBtn.style.background = '#8B5CF6';
+            syncBtn.innerText = '🔄 مزامنة';
+            syncBtn.onclick = manualSync;
+            btnContainer.appendChild(syncBtn);
+        }
+    }
+}, 1000);
+</script>
+<script>
+// ============================================================
+//  إصلاح صلاحيات التعديل والحذف (تسمح بالاسم أو الأرقام المسموحة)
+// ============================================================
+(function() {
+    // قائمة الأرقام المسموح لها بتعديل أي سجل (يمكنك إضافة أرقام أخرى)
+    const SUPER_PHONES = ["738197187", "738197197", "733111272"];
+    
+    // دالة للتحقق من صلاحية المستخدم على سجل معين
+    function isUserAuthorized(record) {
+        if (!record) return false;
+        // 1. إذا كان رقم الجوال الحالي هو نفس رقم الجوال المسجل
+        if (record.recordedByPhone === currentUserPhone) return true;
+        // 2. إذا كان الاسم المسجل هو نفس الاسم الحالي (حتى لو اختلف الرقم)
+        if (record.recordedBy === currentUserName) return true;
+        // 3. إذا كان رقم الجوال الحالي ضمن قائمة الأرقام المميزة (سوبر)
+        if (SUPER_PHONES.includes(currentUserPhone)) return true;
+        return false;
+    }
+    
+    // ====== إعادة تعريف دالة editRecord ======
+    window.editRecord = function(recordId, type) {
+        if (type === 'gen') {
+            let idx = generators.findIndex(g => g.id == recordId);
+            if (idx === -1) return;
+            let r = generators[idx];
+            if (!isUserAuthorized(r)) {
+                showToast("❌ ليس لديك صلاحية تعديل هذا السجل", "error");
+                return;
+            }
+            // باقي الكود كما هو (نفس الأصل)
+            editIndex = idx; editType = 'gen';
+            document.getElementById("g_date").value = r.date;
+            let originalSite = r.site;
+            let match = originalSite.match(/^(.*?)\s*-\s*مولد\s*(\d+)$/);
+            if(match && multiUnitSites.includes(match[1])) {
+                document.getElementById("g_site").value = match[1];
+                document.getElementById("g_unit").value = match[2];
+                document.getElementById("g_unit_container").style.display = "block";
+            } else {
+                document.getElementById("g_site").value = originalSite;
+                document.getElementById("g_unit_container").style.display = "none";
+            }
+            document.getElementById("g_hours").value = r.hours;
+            document.getElementById("g_diesel").value = r.diesel || '';
+            document.getElementById("g_note").value = r.note || '';
+            go('generator');
+        } else {
+            let idx = oils.findIndex(o => o.id == recordId);
+            if (idx === -1) return;
+            let r = oils[idx];
+            if (!isUserAuthorized(r)) {
+                showToast("❌ ليس لديك صلاحية تعديل هذا السجل", "error");
+                return;
+            }
+            editIndex = idx; editType = 'oil';
+            document.getElementById("o_date").value = r.date;
+            let originalSite = r.site;
+            let match = originalSite.match(/^(.*?)\s*-\s*مولد\s*(\d+)$/);
+            if(match && multiUnitSites.includes(match[1])) {
+                document.getElementById("o_site").value = match[1];
+                document.getElementById("o_unit").value = match[2];
+                document.getElementById("o_unit_container").style.display = "block";
+            } else {
+                document.getElementById("o_site").value = originalSite;
+                document.getElementById("o_unit_container").style.display = "none";
+            }
+            document.getElementById("o_current").value = r.current;
+            document.getElementById("o_diesel").value = r.diesel || '';
+            document.getElementById("o_avgDaily").value = r.avgDailyHours;
+            document.getElementById("f_oil").checked = r.filters?.oil || false;
+            document.getElementById("f_diesel").checked = r.filters?.diesel || false;
+            document.getElementById("f_air").checked = r.filters?.air || false;
+            go('oil');
+        }
+    };
+    
+    // ====== إعادة تعريف دالة moveToTrash ======
+    window.moveToTrash = function(recordId, type) {
+        let deletedItem = null;
+        if(type === 'gen') {
+            let idx = generators.findIndex(g => g.id == recordId);
+            if(idx !== -1) {
+                if (!isUserAuthorized(generators[idx])) {
+                    showToast("❌ لا يمكنك حذف سجل ليس لك", "error");
+                    return;
+                }
+                deletedItem = generators[idx];
+                generators.splice(idx,1);
+            }
+        } else {
+            let idx = oils.findIndex(o => o.id == recordId);
+            if(idx !== -1) {
+                if (!isUserAuthorized(oils[idx])) {
+                    showToast("❌ لا يمكنك حذف سجل ليس لك", "error");
+                    return;
+                }
+                deletedItem = oils[idx];
+                oils.splice(idx,1);
+            }
+        }
+        if(deletedItem) {
+            trashItems.push({ type, data: deletedItem, deletedAt: Date.now() });
+            pushToFirebase();
+            playDelete();
+            showToast("🗑️ تم نقل السجل إلى سلة المهملات");
+            renderRecords();
+        }
+    };
+    
+    // ====== إعادة تعريف دالة restoreFromTrash (استرجاع) ======
+    // لا تحتاج صلاحية لأنها استرجاع، لكن نضيفها احتياطاً
+    let originalRestore = window.restoreFromTrash;
+    if (originalRestore) {
+        window.restoreFromTrash = function(trashIndex) {
+            let item = trashItems[trashIndex];
+            if(!item) return;
+            // لا نطلب صلاحية للاسترجاع، لأن السجل محذوف بالفعل
+            if(item.type === 'gen') generators.push(item.data);
+            else oils.push(item.data);
+            trashItems.splice(trashIndex,1);
+            pushToFirebase();
+            playSave();
+            showToast("♻️ تم استرجاع السجل");
+            renderRecords();
+        };
+    }
+    
+    // ====== إعادة تعريف دالة permanentDeleteFromTrash ======
+    window.permanentDeleteFromTrash = function(trashIndex) {
+        let item = trashItems[trashIndex];
+        if(!item) return;
+        // نتحقق من صلاحية الحذف النهائي (نفس صلاحية التعديل)
+        if (!isUserAuthorized(item.data)) {
+            showToast("❌ ليس لديك صلاحية حذف هذا السجل نهائياً", "error");
+            return;
+        }
+        trashItems.splice(trashIndex,1);
+        pushToFirebase();
+        playDelete();
+        showToast("✅ تم حذف السجل نهائياً");
+        renderRecords();
+    };
+    
+    console.log('✅ تم تحديث نظام الصلاحيات (الاسم والأرقام المسموحة)');
+})();
+</script>
+<script>
+// ============================================================
+//  تحسين سرعة التحميل ومنع التعليق عند ضعف الشبكة
+// ============================================================
+(function() {
+    // 1. دالة تحميل البيانات المخزنة محلياً فوراً (بدون انتظار Firebase)
+    function loadLocalDataImmediately() {
+        let g = localStorage.getItem("generators");
+        let o = localStorage.getItem("oils");
+        let t = localStorage.getItem("trashItems");
+        let sid = localStorage.getItem("nextRecordId");
+        
+        if (sid) nextRecordId = parseInt(sid);
+        if (g) generators = JSON.parse(g);
+        if (o) oils = JSON.parse(o);
+        if (t) trashItems = JSON.parse(t);
+        
+        console.log('✅ تم تحميل البيانات من التخزين المحلي فوراً');
+        
+        // تحديث واجهة المستخدم بالبيانات المحلية
+        renderRecords();
+        renderCountdown();
+        renderAlarms();
+        if (document.getElementById('stats')?.classList.contains('active')) {
+            drawChart();
+            calculateDieselConsumption();
+        }
+    }
+    
+    // 2. دالة لمزامنة البيانات مع Firebase في الخلفية (بدون تعليق)
+    function syncWithFirebaseInBackground() {
+        if (!database) {
+            console.warn('⚠️ Firebase غير متاح، سيتم العمل بالبيانات المحلية فقط');
+            return;
+        }
+        
+        // نستخدم 'once' بدلاً من 'on' لتجنب الاستماع المستمر الذي قد يسبب بطء
+        console.log('🔄 جاري مزامنة البيانات مع Firebase في الخلفية...');
+        
+        // جلب المولدات
+        database.ref('generators').once('value').then(snap => {
+            if (snap.exists()) {
+                generators = Object.values(snap.val());
+                saveToLocal();
+                renderRecords();
+                renderCountdown();
+            }
+        }).catch(err => {
+            console.warn('⚠️ فشل جلب المولدات من Firebase:', err);
+        });
+        
+        // جلب صيانة الزيت
+        database.ref('oils').once('value').then(snap => {
+            if (snap.exists()) {
+                oils = Object.values(snap.val());
+                saveToLocal();
+                renderRecords();
+                renderCountdown();
+                renderAlarms();
+            }
+        }).catch(err => {
+            console.warn('⚠️ فشل جلب صيانة الزيت من Firebase:', err);
+        });
+        
+        // جلب سلة المهملات
+        database.ref('trash').once('value').then(snap => {
+            if (snap.exists()) {
+                trashItems = Object.values(snap.val());
+                saveToLocal();
+                renderRecords();
+            }
+        }).catch(err => {
+            console.warn('⚠️ فشل جلب سلة المهملات من Firebase:', err);
+        });
+        
+        // جلب المستخدمين
+        database.ref('users').once('value').then(snap => {
+            if (snap.exists()) {
+                users = snap.val();
+                saveToLocal();
+            }
+        }).catch(err => {
+            console.warn('⚠️ فشل جلب المستخدمين من Firebase:', err);
+        });
+    }
+    
+    // 3. تعديل دالة syncData لتعمل بالطريقة الجديدة (لا نحتاج الاستماع المستمر)
+    // استبدال syncData الأصلية بدالة أكثر كفاءة
+    if (window.syncData) {
+        window.syncData = function() {
+            // نلغي أي استماع سابق
+            if (database) {
+                database.ref('generators').off();
+                database.ref('oils').off();
+                database.ref('trash').off();
+                database.ref('users').off();
+            }
+            
+            // نحمّل البيانات محلياً فوراً
+            loadLocalDataImmediately();
+            
+            // ثم نزامن مع Firebase في الخلفية
+            setTimeout(syncWithFirebaseInBackground, 100);
+        };
+    }
+    
+    // 4. تعديل دالة loginSystem لتسريع الدخول
+    let originalLogin = window.loginSystem;
+    if (originalLogin) {
+        window.loginSystem = async function() {
+            let phone = document.getElementById("loginPhone").value.trim();
+            let pass = document.getElementById("loginPass").value.trim();
+            
+            // نتحقق من البيانات محلياً أولاً (بدون انتظار Firebase)
+            if (users[phone] && users[phone].password === pass) {
+                currentUserPhone = phone;
+                currentUserName = users[phone].name;
+                localStorage.setItem("loggedUser", currentUserName);
+                localStorage.setItem("loggedUserPhone", phone);
+                document.getElementById("loginScreen").style.display = "none";
+                document.getElementById("sidebarName").innerText = currentUserName;
+                document.getElementById("sidebarPhone").innerText = phone;
+                if (currentUserPhone === "733111272") {
+                    document.getElementById("welcomeUser").innerHTML = `👨‍🔧 نورتنا يامدير ابوبكر منصور الحكيمي`;
+                } else {
+                    document.getElementById("welcomeUser").innerHTML = `👨‍🔧 أهلًا وسهلًا نورتنا يا مهندس ${currentUserName}`;
+                }
+                if (Notification.permission !== "granted") Notification.requestPermission();
+                initSites();
+                loadFromStorage();
+                
+                // تحميل البيانات فوراً من التخزين المحلي
+                loadLocalDataImmediately();
+                
+                // ثم مزامنة Firebase في الخلفية
+                setTimeout(syncWithFirebaseInBackground, 200);
+                startReminder();
+                toggleAddUserButton();
+                showToast('✅ تم الدخول بنجاح');
+                return;
+            }
+            
+            // إذا لم ينجح الدخول المحلي، نحاول Firebase
+            if (database) {
+                try {
+                    const snap = await database.ref('users').get();
+                    if (snap.exists()) users = snap.val();
+                    else await database.ref('users').set(users);
+                } catch(e) { console.warn(e); }
+            }
+            
+            // نعيد التحقق بعد جلب البيانات من Firebase
+            if (users[phone] && users[phone].password === pass) {
+                currentUserPhone = phone;
+                currentUserName = users[phone].name;
+                localStorage.setItem("loggedUser", currentUserName);
+                localStorage.setItem("loggedUserPhone", phone);
+                document.getElementById("loginScreen").style.display = "none";
+                document.getElementById("sidebarName").innerText = currentUserName;
+                document.getElementById("sidebarPhone").innerText = phone;
+                if (currentUserPhone === "733111272") {
+                    document.getElementById("welcomeUser").innerHTML = `👨‍🔧 نورتنا يامدير ابوبكر منصور الحكيمي`;
+                } else {
+                    document.getElementById("welcomeUser").innerHTML = `👨‍🔧 أهلًا وسهلًا نورتنا يا مهندس ${currentUserName}`;
+                }
+                if (Notification.permission !== "granted") Notification.requestPermission();
+                initSites();
+                loadFromStorage();
+                loadLocalDataImmediately();
+                setTimeout(syncWithFirebaseInBackground, 200);
+                startReminder();
+                toggleAddUserButton();
+                showToast('✅ تم الدخول بنجاح');
+            } else {
+                document.getElementById("loginError").style.display = "block";
+                document.getElementById("loginError").innerText = "بيانات الدخول غير صحيحة";
+            }
+        };
+    }
+    
+    // 5. تعديل دالة pushToFirebase لتكون غير متزامنة ولا تسبب تعليقاً
+    let originalPush = window.pushToFirebase;
+    if (originalPush) {
+        window.pushToFirebase = function() {
+            if (database) {
+                // نرفع البيانات بشكل غير متزامن (لا ننتظر الرد)
+                Promise.all([
+                    database.ref('generators').set(generators).catch(e => console.warn('⚠️ فشل رفع المولدات:', e)),
+                    database.ref('oils').set(oils).catch(e => console.warn('⚠️ فشل رفع الزيت:', e)),
+                    database.ref('trash').set(trashItems).catch(e => console.warn('⚠️ فشل رفع المهملات:', e)),
+                    database.ref('users').set(users).catch(e => console.warn('⚠️ فشل رفع المستخدمين:', e))
+                ]).then(() => {
+                    console.log('✅ تم رفع البيانات إلى Firebase بنجاح');
+                }).catch(e => {
+                    console.warn('⚠️ فشل رفع بعض البيانات:', e);
+                });
+            }
+            saveToLocal();
+        };
+    }
+    
+    console.log('✅ تم تحسين سرعة التحميل ومنع التعليق عند ضعف الشبكة');
+})();
+</script>
+<style>
+/* ============================================================
+   1. تحسينات بصرية متقدمة (خلفيات متحركة + تأثيرات)
+   ============================================================ */
+
+/* خلفية متحركة (موجات سلسة) */
+body {
+    background: linear-gradient(-45deg, #020617, #0a1628, #001533, #020617);
+    background-size: 400% 400%;
+    animation: gradientBG 18s ease infinite;
+    position: relative;
+}
+@keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* جزيئات متوهجة في الخلفية (نجوم صغيرة) */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-image: 
+        radial-gradient(2px 2px at 20px 30px, #00c6ff, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 40px 70px, #0072ff, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 50px 160px, #00c6ff, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 90px 40px, #0072ff, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 130px 80px, #00c6ff, rgba(0,0,0,0)),
+        radial-gradient(2px 2px at 160px 30px, #0072ff, rgba(0,0,0,0));
+    background-size: 200px 200px;
+    opacity: 0.3;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* البطاقات: تأثير زجاجي مع وهج ورفع عند المرور */
+.card {
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(0, 198, 255, 0.15);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+}
+.card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at center, rgba(0,198,255,0.05) 0%, transparent 70%);
+    opacity: 0;
+    transition: opacity 0.6s;
+    pointer-events: none;
+}
+.card:hover::before {
+    opacity: 1;
+}
+.card:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 25px 50px -12px rgba(0, 198, 255, 0.4), 0 0 30px rgba(0, 198, 255, 0.15);
+    border-color: rgba(0, 198, 255, 0.5);
+}
+.card:active {
+    transform: scale(0.98);
+}
+
+/* الأزرار: تأثير تموج (Ripple) عند النقر */
+.btn-save, .btn-outline, .btn-confirm, .btn-cancel, .export-btn {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+.btn-save:hover, .btn-outline:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 30px rgba(0, 198, 255, 0.3);
+}
+
+/* تأثير التموج (Ripple) */
+.ripple-effect {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.4);
+    animation: rippleAnim 0.7s linear forwards;
+    pointer-events: none;
+}
+@keyframes rippleAnim {
+    0% { width: 0; height: 0; opacity: 1; }
+    100% { width: 500px; height: 500px; opacity: 0; transform: translate(-50%, -50%); }
+}
+
+/* شريط التقدم الدائري لحالة الزيت */
+.oil-progress-ring {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: conic-gradient(#00c6ff var(--progress-deg, 0deg), #1e293b 0deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 10px auto;
+    position: relative;
+    transition: all 0.8s ease;
+}
+.oil-progress-ring::after {
+    content: '';
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    background: #0f172a;
+    border-radius: 50%;
+}
+.oil-progress-ring .progress-text {
+    position: relative;
+    z-index: 2;
+    font-weight: 900;
+    font-size: 16px;
+    color: white;
+}
+
+/* عد تنازلي متحرك */
+.countdown-card {
+    transition: all 0.5s ease;
+    border-right-width: 8px !important;
+}
+.countdown-card:hover {
+    transform: translateX(-8px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+.countdown-days {
+    animation: pulseGlow 2s infinite;
+}
+@keyframes pulseGlow {
+    0% { box-shadow: 0 0 5px rgba(0,198,255,0.2); }
+    50% { box-shadow: 0 0 20px rgba(0,198,255,0.5); }
+    100% { box-shadow: 0 0 5px rgba(0,198,255,0.2); }
+}
+
+/* سجلات (Records) بتأثير ظهور متتابع */
+.record {
+    animation: slideUpFade 0.5s ease forwards;
+    opacity: 0;
+    transform: translateY(20px);
+}
+.record:nth-child(1) { animation-delay: 0.05s; }
+.record:nth-child(2) { animation-delay: 0.10s; }
+.record:nth-child(3) { animation-delay: 0.15s; }
+.record:nth-child(4) { animation-delay: 0.20s; }
+.record:nth-child(5) { animation-delay: 0.25s; }
+.record:nth-child(6) { animation-delay: 0.30s; }
+.record:nth-child(7) { animation-delay: 0.35s; }
+.record:nth-child(8) { animation-delay: 0.40s; }
+.record:nth-child(9) { animation-delay: 0.45s; }
+.record:nth-child(10) { animation-delay: 0.50s; }
+
+@keyframes slideUpFade {
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* تحسين الإشعارات (Toasts) */
+#toast {
+    background: rgba(16, 185, 129, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    padding: 18px 35px;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-radius: 60px;
+    transition: 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+#toast.error {
+    background: rgba(239, 68, 68, 0.95);
+}
+#toast::before {
+    content: '✨';
+    font-size: 24px;
+    animation: spinStar 3s linear infinite;
+}
+@keyframes spinStar {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* شاشة تسجيل الدخول: تحسين الخلفية */
+#loginScreen > div {
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(25px);
+    border: 1px solid rgba(0, 198, 255, 0.2);
+    box-shadow: 0 0 80px rgba(0, 198, 255, 0.1);
+    animation: floatIn 0.8s ease;
+}
+
+/* مؤشر تحميل بسيط عند الضغط */
+.btn-loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+.btn-loading::after {
+    content: '⏳';
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    margin-left: 10px;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* تأثير اهتزاز للأخطاء */
+.shake {
+    animation: shake 0.5s ease;
+}
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-10px); }
+    40% { transform: translateX(10px); }
+    60% { transform: translateX(-6px); }
+    80% { transform: translateX(6px); }
+}
+
+/* رسوم متحركة للأيقونات في الصفحة الرئيسية */
+.home-card-icon {
+    display: inline-block;
+    transition: all 0.5s ease;
+}
+.card:hover .home-card-icon {
+    transform: scale(1.2) rotate(-10deg);
+}
+</style>
+
+<script>
+// ============================================================
+//   2. تحسينات تفاعلية (صوت، اهتزاز، تموج، مؤشرات)
+// ============================================================
+
+(function() {
+
+    // --- 2.1 تأثير التموج (Ripple) على جميع الأزرار ---
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        // نمنع التموج إذا كان الزر به class معين
+        if (btn.classList.contains('no-ripple')) return;
+        
+        const ripple = document.createElement('span');
+        ripple.className = 'ripple-effect';
+        const rect = btn.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        ripple.style.left = x + 'px';
+        ripple.style.top = y + 'px';
+        btn.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 700);
+    });
+
+    // --- 2.2 اهتزاز الجوال عند الأخطاء (Vibration API) ---
+    const originalShowToast = window.showToast;
+    if (originalShowToast) {
+        window.showToast = function(msg, type = "success") {
+            originalShowToast(msg, type);
+            if (type === "error" && navigator.vibrate) {
+                navigator.vibrate(200); // اهتزاز 200 مللي
+            }
+            if (type === "success" && navigator.vibrate) {
+                navigator.vibrate(50); // اهتزاز خفيف عند النجاح
+            }
+        };
+    }
+
+    // --- 2.3 صوت إضافي عند فتح الصفحة (ترحيب) ---
+    function playWelcomeSound() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.value = 523.25; // C5
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+            
+            // نغمة ثانية
+            setTimeout(() => {
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                osc2.frequency.value = 659.25; // E5
+                gain2.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+                osc2.start();
+                osc2.stop(audioCtx.currentTime + 0.3);
+            }, 150);
+        } catch(e) { /* تجاهل الأخطاء */ }
+    }
+
+    // تشغيل صوت الترحيب عند تسجيل الدخول بنجاح
+    const originalLogin = window.loginSystem;
+    if (originalLogin) {
+        window.loginSystem = async function() {
+            await originalLogin.apply(this, arguments);
+            // إذا اختفت شاشة الدخول (يعني نجح الدخول)
+            if (document.getElementById('loginScreen').style.display === 'none') {
+                playWelcomeSound();
+            }
+        };
+    }
+
+    // --- 2.4 تحسين حالة الزيت: إضافة شريط تقدم دائري ---
+    // نضيف وظيفة لتحديث شريط التقدم في صفحة الزيارة
+    const originalUpdateOilStatus = window.updateOilStatus;
+    if (originalUpdateOilStatus) {
+        window.updateOilStatus = function() {
+            originalUpdateOilStatus();
+            // نضيف شريط التقدم الدائري بعد عرض الحالة
+            const statusDiv = document.getElementById('oilStatus');
+            if (!statusDiv || statusDiv.style.display === 'none') return;
+            
+            // نبحث عن نسبة التقدم من النص
+            const text = statusDiv.innerText;
+            const match = text.match(/المتبقي:\s*([\d.]+)\s*ساعة/);
+            if (match) {
+                const remaining = parseFloat(match[1]);
+                const total = 300;
+                const percent = Math.min(100, ((total - remaining) / total) * 100);
+                const deg = (percent / 100) * 360;
+                
+                // نتحقق إذا كان الشريط موجوداً
+                let ring = statusDiv.querySelector('.oil-progress-ring');
+                if (!ring) {
+                    ring = document.createElement('div');
+                    ring.className = 'oil-progress-ring';
+                    ring.innerHTML = `<span class="progress-text">${Math.round(percent)}%</span>`;
+                    statusDiv.appendChild(ring);
+                }
+                ring.style.setProperty('--progress-deg', deg + 'deg');
+                ring.querySelector('.progress-text').innerText = Math.round(percent) + '%';
+                
+                // تغيير اللون حسب النسبة
+                if (percent > 80) {
+                    ring.style.background = `conic-gradient(#ef4444 ${deg}deg, #1e293b 0deg)`;
+                } else if (percent > 60) {
+                    ring.style.background = `conic-gradient(#f59e0b ${deg}deg, #1e293b 0deg)`;
+                } else {
+                    ring.style.background = `conic-gradient(#10b981 ${deg}deg, #1e293b 0deg)`;
+                }
+            }
+        };
+    }
+
+    // --- 2.5 تأثير الكتابة التلقائية (Typing effect) على الترحيب ---
+    function enhanceWelcomeBanner() {
+        const banner = document.getElementById('welcomeUser');
+        if (!banner) return;
+        const originalText = banner.innerText;
+        // نضيف تأثير وميض
+        banner.style.transition = 'all 0.5s ease';
+        setInterval(() => {
+            banner.style.transform = 'scale(1.01)';
+            setTimeout(() => banner.style.transform = 'scale(1)', 200);
+        }, 3000);
+    }
+    setTimeout(enhanceWelcomeBanner, 1000);
+
+    // --- 2.6 إضافة تأثير عد تنازلي مع شريط تقدم ---
+    // نعدل دالة renderCountdown لإضافة أشرطة تقدم
+    const originalRenderCountdown = window.renderCountdown;
+    if (originalRenderCountdown) {
+        window.renderCountdown = function() {
+            originalRenderCountdown();
+            // بعد رسم العد التنازلي، نضيف أشرطة تقدم بسيطة
+            setTimeout(() => {
+                const cards = document.querySelectorAll('.countdown-card');
+                cards.forEach(card => {
+                    const daysText = card.querySelector('.countdown-days');
+                    if (!daysText) return;
+                    const days = parseInt(daysText.innerText);
+                    if (isNaN(days)) return;
+                    const maxDays = 7;
+                    const percent = Math.min(100, ((maxDays - days) / maxDays) * 100);
+                    
+                    let bar = card.querySelector('.countdown-bar');
+                    if (!bar) {
+                        bar = document.createElement('div');
+                        bar.className = 'countdown-bar';
+                        bar.style.cssText = 'width:100%; height:4px; background:#1e293b; border-radius:4px; margin-top:8px; overflow:hidden;';
+                        const fill = document.createElement('div');
+                        fill.className = 'countdown-fill';
+                        fill.style.cssText = 'height:100%; border-radius:4px; transition: width 1s ease;';
+                        bar.appendChild(fill);
+                        card.appendChild(bar);
+                    }
+                    const fill = bar.querySelector('.countdown-fill');
+                    if (fill) {
+                        fill.style.width = percent + '%';
+                        fill.style.background = days <= 2 ? '#ef4444' : (days <= 5 ? '#f59e0b' : '#10b981');
+                    }
+                });
+            }, 50);
+        };
+    }
+
+    // --- 2.7 تأثير الصفحات عند التبديل (انزلاق محسن) ---
+    const originalGo = window.go;
+    if (originalGo) {
+        window.go = function(page, el) {
+            const currentPage = document.querySelector('.page.active');
+            if (currentPage) {
+                currentPage.style.animation = 'floatOut 0.2s ease forwards';
+                setTimeout(() => {
+                    originalGo(page, el);
+                    const newPage = document.getElementById(page);
+                    if (newPage) {
+                        newPage.style.animation = 'floatIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards';
+                    }
+                }, 150);
+            } else {
+                originalGo(page, el);
+            }
+        };
+        // إضافة animation جديدة للخروج
+        const styleSheet = document.createElement('style');
+        styleSheet.textContent = `
+            @keyframes floatOut {
+                0% { opacity: 1; transform: translateY(0); }
+                100% { opacity: 0; transform: translateY(-30px); }
+            }
+        `;
+        document.head.appendChild(styleSheet);
+    }
+
+    // --- 2.8 تحسين زر الحفظ: إضافة مؤشر تحميل عند الضغط ---
+    const originalSaveGen = window.saveGenerator;
+    if (originalSaveGen) {
+        window.saveGenerator = function() {
+            const btn = document.querySelector('#generator .btn-save');
+            if (btn) {
+                btn.classList.add('btn-loading');
+                btn.innerText = '⏳ جاري الحفظ...';
+                setTimeout(() => {
+                    btn.classList.remove('btn-loading');
+                    btn.innerHTML = '💎 حفظ السجل';
+                }, 1500);
+            }
+            originalSaveGen();
+        };
+    }
+
+    const originalSaveOil = window.saveOil;
+    if (originalSaveOil) {
+        window.saveOil = function() {
+            const btn = document.querySelector('#oil .btn-save');
+            if (btn) {
+                btn.classList.add('btn-loading');
+                btn.innerText = '⏳ جاري الحفظ...';
+                setTimeout(() => {
+                    btn.classList.remove('btn-loading');
+                    btn.innerHTML = '🚀 اعتماد الصيانة';
+                }, 1500);
+            }
+            originalSaveOil();
+        };
+    }
+
+    console.log('✅ تم تفعيل جميع التحسينات الذهبية (صوت، رسوم متحركة، تأثيرات)');
+})();
+</script>
+<script>
+// ============================================================
+//  دالة لتحميل البيانات من localStorage فوراً (بدون انتظار Firebase)
+// ============================================================
+window.loadLocalDataImmediately = function() {
+    try {
+        let g = localStorage.getItem("generators");
+        let o = localStorage.getItem("oils");
+        let t = localStorage.getItem("trashItems");
+        let sid = localStorage.getItem("nextRecordId");
+        if (sid) window.nextRecordId = parseInt(sid);
+        if (g) window.generators = JSON.parse(g);
+        if (o) window.oils = JSON.parse(o);
+        if (t) window.trashItems = JSON.parse(t);
+        console.log('✅ تم عرض البيانات المحلية فوراً');
+        // تحديث الواجهة إذا كانت الدوال موجودة
+        if (typeof renderRecords === 'function') renderRecords();
+        if (typeof renderCountdown === 'function') renderCountdown();
+        if (typeof renderAlarms === 'function') renderAlarms();
+    } catch(e) {
+        console.warn('⚠️ فشل تحميل البيانات المحلية:', e);
+    }
+};
+
+// تنفيذ فوراً
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', window.loadLocalDataImmediately);
+} else {
+    window.loadLocalDataImmediately();
+}
+</script>
+</body>
+</html>
